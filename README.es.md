@@ -10,6 +10,8 @@ Abre `index.html` en Chrome, Edge o Firefox (doble clic basta, no necesita servi
 
 - **3MF multicolor (AMS)**: un objeto con dos piezas, `Disco` (filamento 1) y `Numeros` (filamento 2).
 - **3MF con cambio por capa**: una sola pieza con un cambio de filamento en la primera capa de sólo números, igual que los Doodle Disc de MakerWorld. Para impresoras sin AMS.
+
+  Usa Bambu Studio 02.08.03 o posterior. La versión 02.08.02 tiene un bug: cualquier 3MF sin perfil de impresión propio muestra "The 3mf file has invalid config, load geometry data only" y descarta el cambio de filamento por capa.
 - **STL** del disco y de los números por separado, y **SVG** de la vista superior.
 
 La interfaz está en inglés y español. Sigue el idioma del navegador y se puede cambiar con el selector de la esquina superior derecha (la elección se recuerda). Los nombres de piezas y archivos descargados siguen el idioma elegido.

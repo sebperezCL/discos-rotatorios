@@ -69,6 +69,7 @@
         '<h3>Printing in two colors</h3>' +
         '<p><b>Multicolor 3MF (AMS):</b> one object with two parts, “Disc” (filament 1) and “Numbers” (filament 2). Open it in Bambu Studio or Orca Slicer and check that each part has its filament.</p>' +
         '<p><b>3MF with layer change:</b> a single part with a filament change at the first layer that is numbers only (like the Doodle Discs on MakerWorld). For printers without AMS: the printer pauses and you swap the filament by hand.</p>' +
+        '<p>Use Bambu Studio 02.08.03 or newer. Version 02.08.02 warns that the 3MF “has invalid config” and drops the filament change by layer (the parts still load).</p>' +
         '<p>The STL files come out separately in case you use another program. Everything is tuned for a 0.4 mm nozzle and 0.16 mm layers.</p>' +
         '<h3>Tips</h3>' +
         '<ul>' +
@@ -170,6 +171,7 @@
         '<h3>Imprimir con dos colores</h3>' +
         '<p><b>3MF multicolor (AMS):</b> un objeto con dos piezas, «Disco» (filamento 1) y «Numeros» (filamento 2). Ábrelo en Bambu Studio u Orca Slicer y revisa que cada pieza tenga su filamento.</p>' +
         '<p><b>3MF con cambio por capa:</b> una sola pieza con un cambio de filamento en la primera capa que es sólo números (como los Doodle Disc de MakerWorld). Sirve para impresoras sin AMS: la impresora se detiene y cambias el filamento a mano.</p>' +
+        '<p>Usa Bambu Studio 02.08.03 o posterior. La versión 02.08.02 avisa que el 3MF «has invalid config» y descarta el cambio de filamento por capa (las piezas sí se cargan).</p>' +
         '<p>Los STL salen por separado por si usas otro programa. Todo está pensado para boquilla de 0,4 mm y capas de 0,16 mm.</p>' +
         '<h3>Consejos</h3>' +
         '<ul>' +

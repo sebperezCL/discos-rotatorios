@@ -10,6 +10,8 @@ Open `index.html` in Chrome, Edge or Firefox (double-clicking it is enough, no s
 
 - **Multicolor 3MF (AMS)**: one object with two parts, `Disc` (filament 1) and `Numbers` (filament 2).
 - **3MF with layer change**: a single part with a filament change at the first numbers-only layer, just like the Doodle Discs on MakerWorld. For printers without AMS.
+
+  Use Bambu Studio 02.08.03 or newer. Version 02.08.02 has a bug: any 3MF without its own print profile triggers "The 3mf file has invalid config, load geometry data only" and the filament change by layer is dropped.
 - **STL** files for the disc and the numbers separately, and an **SVG** of the top view.
 
 The interface is available in English and Spanish. It follows the browser's language and can be switched from the selector in the top-right corner (the choice is remembered). Part and file names in the downloads follow the selected language.
