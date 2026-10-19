@@ -25,6 +25,8 @@ The interface is available in English and Spanish. It follows the browser's lang
 
 Default measurements are taken from the Dog Man model on MakerWorld (120 mm, 0.8 mm body, 0.32 mm raised numbers, 1.25 mm slots): here 120 mm, 0.84 mm body (matches 0.2 + 0.16 layers), 0.32 mm numbers, 1.3 mm slots, 1.5 mm bridge.
 
+The numbers are 4 mm tall with a 0.9 mm stroke (two lines of a 0.4 mm nozzle) so they stay legible when printed. The 1 has a base and the 9 a straight stem, so no number reads as another one upside down. Each number is placed at least 1.5 mm ("Number clearance") farther from other slots than from its own, so it's clear which slot it belongs to. When there's no room, a slightly smaller number is used as a last resort.
+
 ## Conventions
 
 - Coordinates in mm, y pointing up, origin at the center of the disc.

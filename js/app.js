@@ -13,7 +13,7 @@
     var p = {
       diameter: num('diameter'), thickness: num('thickness'), numH: num('numH'),
       slotW: num('slotW'), gap: num('gap'), maxLen: num('maxLen'), maxPerPos: Math.max(0, Math.round(num('maxPerPos'))),
-      labelH: num('labelH'), rimNumH: num('rimNumH'), labelStroke: num('labelStroke'),
+      labelH: num('labelH'), rimNumH: num('rimNumH'), labelStroke: num('labelStroke'), labelClear: num('labelClear'),
       tickLen: num('tickLen'), tickW: num('tickW'), frame: chk('frame'),
       angleStep: num('angleStep'), tries: Math.max(1, Math.round(num('tries'))),
       labelMargin: 0.5, frameW: 0.6, frameDepth: 0.16, reuseBonus: 1.5,
@@ -117,7 +117,7 @@
       var best = null;
       [90, 270, 0, 180].forEach(function (dir) {
         var pdi = place(dir), li = DDLayout.layoutBest(pdi.polylines, p, p.tries);
-        var sc = li.score - pdi.sizeMm * 2;
+        var sc = li.score - pdi.sizeMm * 3;
         if (!best || sc < best.sc) best = { sc: sc, dir: dir, pd: pdi, lay: li };
       });
       $('dirDeg').value = best.dir;

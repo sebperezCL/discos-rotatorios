@@ -20,7 +20,7 @@
   }
   var GLYPHS = {
     '0': [{ closed: true, pts: arc(0.3, 0.5, 0.3, 0.5, 0, 360, 40).slice(0, -1) }],
-    '1': [{ pts: [[0.1, 0.78], [0.34, 1.0], [0.34, 0.0]] }],
+    '1': [{ pts: [[0.1, 0.78], [0.34, 1.0], [0.34, 0.0]] }, { pts: [[0.08, 0.0], [0.58, 0.0]] }],   // base bar: never mistaken for a stray line
     '2': [{ pts: arc(0.3, 0.7, 0.29, 0.3, 165, -40, 20).concat([[0.0, 0.0], [0.6, 0.0]]) }],
     '3': [{ pts: arc(0.29, 0.75, 0.25, 0.25, 150, -90, 20).concat(arc(0.29, 0.27, 0.29, 0.27, 90, -150, 22).slice(1)) }],
     '4': [{ pts: [[0.46, 0.0], [0.46, 1.0], [0.0, 0.3], [0.62, 0.3]] }],
@@ -29,9 +29,9 @@
     '7': [{ pts: [[0.0, 1.0], [0.6, 1.0], [0.18, 0.0]] }],
     '8': [{ closed: true, pts: arc(0.3, 0.765, 0.235, 0.235, 0, 360, 28).slice(0, -1) },
           { closed: true, pts: arc(0.3, 0.27, 0.285, 0.27, 0, 360, 32).slice(0, -1) }],
-    '9': null
+    // 9 with a straight stem (6 has a curved one): numbers are seen rotated, so they must not be a 6 upside down
+    '9': [{ closed: true, pts: arc(0.3, 0.7, 0.3, 0.3, 0, 360, 28).slice(0, -1) }, { pts: [[0.6, 0.7], [0.6, 0.0]] }]
   };
-  GLYPHS['9'] = GLYPHS['6'].map(function (s) { return { pts: s.pts.map(function (p) { return [0.6 - p[0], 1 - p[1]]; }) }; });
   var ADV = 0.6, SPACING = 0.32;
 
   function textWidth(str, h, sw) { var hh = h - sw; return str.length * ADV * hh + (str.length - 1) * SPACING * hh + sw; }
@@ -107,7 +107,7 @@
     // Numbers next to each slot (already placed by the layout)
     var labels = [], missing = [];
     lay.pieces.forEach(function (pc) {
-      if (pc.label) labels.push({ txt: String(pc.pos), x: pc.label.x, y: pc.label.y, ang: pc.label.ang });
+      if (pc.label) labels.push({ txt: String(pc.pos), x: pc.label.x, y: pc.label.y, ang: pc.label.ang, h: p.labelH * (pc.label.scale || 1) });
       else missing.push(pc.pos);
     });
 
@@ -120,7 +120,7 @@
       rimStrokes = rimStrokes.concat(textStrokes(String(ps.n), u[0] * rn, u[1] * rn, -ps.theta * D2R, p.rimNumH, p.labelStroke));
     });
     var labelStrokes = [];
-    labels.forEach(function (lb) { labelStrokes = labelStrokes.concat(textStrokes(lb.txt, lb.x, lb.y, lb.ang, p.labelH, p.labelStroke)); });
+    labels.forEach(function (lb) { labelStrokes = labelStrokes.concat(textStrokes(lb.txt, lb.x, lb.y, lb.ang, lb.h, p.labelStroke)); });
 
     var numbers = boolOp(CT().ctUnion, offsetStrokes(labelStrokes.concat(rimStrokes), p.labelStroke).concat(offsetStrokes(tickStrokes, p.tickW)));
     numbers = boolOp(CT().ctIntersection, numbers, body);

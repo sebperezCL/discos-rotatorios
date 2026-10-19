@@ -11,6 +11,7 @@
 (function (root) {
   'use strict';
   var D2R = Math.PI / 180;
+  var LABEL_SMALL = 0.8;   // scale of the fallback number when a full-size one doesn't fit
 
   function plen(p) { var s = 0; for (var i = 1; i < p.length; i++) s += Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]); return s; }
   function rot(p, a) { var c = Math.cos(a), s = Math.sin(a); return [c * p[0] - s * p[1], s * p[0] + c * p[1]]; }
@@ -227,7 +228,7 @@
 
   /**
    * Cuts into pieces and assigns rotations.
-   * p: { slotW, gap, maxLen, angleStep, minSepDeg, maxPerPos (0 = no limit), rMax }
+   * p: { slotW, gap, maxLen, angleStep, minSepDeg, maxPerPos (0 = no limit), rMax, labelClear }
    */
   function layout(polylines, p) {
     var minD = p.slotW + p.gap;                       // minimum distance between slot centerlines
@@ -273,6 +274,8 @@
     var grid = new Grid(minD), used = [], nA = Math.round(360 / p.angleStep);
     var R = p.diameter / 2, rLab = R - p.rimZone, lm = p.slotW / 2 + p.labelMargin;
     var occSlot = new Occ(R, 0.25), occLab = new Occ(R, 0.25);
+    // occFar: other slots and numbers with a wide margin, so a number clearly belongs to its own slot
+    var clear = p.labelClear || 0, occFar = new Occ(R, 0.25);
     var lbw = p.labelBox[0], lbh = p.labelBox[1];
     var placedList = [], failed = [], queue2 = pieces.slice();
     function angDist(a, b) { var d = Math.abs(a - b) % 360; return Math.min(d, 360 - d); }
@@ -289,7 +292,9 @@
     }
     // Looks for a spot for the number next to the slot (rotated to read upright
     // when that position is at the top).
-    function findLabel(S, th) {
+    // pass 0: clear of other slots; 1: anywhere free; 2: last resort, a smaller number (LABEL_SMALL)
+    function findLabel(S, th, pass) {
+      var strict = pass === 0, sc = pass === 2 ? LABEL_SMALL : 1, bw = lbw * sc, bh = lbh * sc;
       var ang = -th * D2R, ax = [Math.cos(ang), Math.sin(ang)], ay = [-Math.sin(ang), Math.cos(ang)];
       var L = S.length, cands = [], idxs = [];
       for (var j = 0; j < L; j += 2) idxs.push(j);
@@ -303,8 +308,8 @@
           normals = normals.concat([[sg * tx / tl, sg * ty / tl]]);
         }
         normals.forEach(function (n) {
-          var ext = Math.abs(n[0] * ax[0] + n[1] * ax[1]) * lbw / 2 + Math.abs(n[0] * ay[0] + n[1] * ay[1]) * lbh / 2;
-          [0, 0.7, 1.6, 2.8].forEach(function (extra) {
+          var ext = Math.abs(n[0] * ax[0] + n[1] * ax[1]) * bw / 2 + Math.abs(n[0] * ay[0] + n[1] * ay[1]) * bh / 2;
+          (strict ? [0, 0.4] : [0, 0.7, 1.6, 2.8]).forEach(function (extra) {
             var d = lm + ext + 0.15 + extra;
             cands.push({ x: S[i][0] + n[0] * d, y: S[i][1] + n[1] * d, cost: Math.abs(i - (L - 1) / 2) * 0.35 * 0.3 + extra * 2 });
           });
@@ -312,13 +317,14 @@
       });
       cands.sort(function (u, v) { return u.cost - v.cost; });
       var own = new Grid(lm * 2); S.forEach(function (q) { own.add(q[0], q[1], 0); });
+      var occ = strict ? occFar : occSlot;
       for (var k = 0; k < cands.length; k++) {
         var c = cands[k];
-        if (occSlot.boxFree(c.x, c.y, ang, lbw, lbh, rLab, function (x, y) { return !own.near(x, y, lm); })) return { x: c.x, y: c.y, ang: ang };
+        if (occ.boxFree(c.x, c.y, ang, bw, bh, rLab, function (x, y) { return !own.near(x, y, lm); })) return { x: c.x, y: c.y, ang: ang, clear: strict, scale: sc, w: bw, h: bh };
       }
       return null;
     }
-    var id = 0, noLabel = 0, perPos = {};
+    var id = 0, noLabel = 0, unclear = 0, perPos = {};
     var maxPer = p.maxPerPos > 0 ? p.maxPerPos : Infinity;
     while (queue2.length) {
       var pc = queue2.shift(), cands = [];
@@ -337,10 +343,13 @@
         cands.push({ th: th, S: S, score: score });
       }
       cands.sort(function (a, b) { return b.score - a.score; });
+      // Prefer a rotation where the number sits clearly apart from other slots; otherwise any spot
       var chosen = null, lab = null;
-      for (k = 0; k < cands.length && k < 60; k++) {
-        lab = findLabel(cands[k].S, cands[k].th);
-        if (lab) { chosen = cands[k]; break; }
+      for (var pass = clear > 0 ? 0 : 1; pass < 3 && !chosen; pass++) {
+        for (k = 0; k < cands.length && (pass === 2 || k < 60); k++) {
+          lab = findLabel(cands[k].S, cands[k].th, pass);
+          if (lab) { chosen = cands[k]; break; }
+        }
       }
       if (!chosen && cands.length) {
         if (pc.len > Math.max(4, 3 * minD)) chosen = null;   // better to split it so its number fits
@@ -359,8 +368,15 @@
       var a = -chosen.th * D2R, c = Math.cos(a), s = Math.sin(a);
       pc.theta = chosen.th; pc.id = id++; pc.label = lab;
       pc.disc = pc.pts.map(function (q) { return [c * q[0] - s * q[1], s * q[0] + c * q[1]]; });
-      chosen.S.forEach(function (q) { grid.add(q[0], q[1], pc.id); occSlot.markDisk(q[0], q[1], lm); });
-      if (lab) { occLab.markBox(lab.x, lab.y, lab.ang, lbw + 2 * lm, lbh + 2 * lm); occSlot.markBox(lab.x, lab.y, lab.ang, lbw + 0.6, lbh + 0.6); }
+      chosen.S.forEach(function (q) { grid.add(q[0], q[1], pc.id); occSlot.markDisk(q[0], q[1], lm); occFar.markDisk(q[0], q[1], lm + clear); });
+      if (lab) {
+        // later slots keep the same wide margin from a clear number, so it stays unambiguous
+        var lmL = lab.clear ? lm + clear : lm;
+        occLab.markBox(lab.x, lab.y, lab.ang, lab.w + 2 * lmL, lab.h + 2 * lmL);
+        occSlot.markBox(lab.x, lab.y, lab.ang, lab.w + 0.6, lab.h + 0.6);
+        occFar.markBox(lab.x, lab.y, lab.ang, lab.w + 2 * clear, lab.h + 2 * clear);
+        if (!lab.clear) unclear++;
+      }
       placedList.push(pc);
     }
     // A piece that didn't fit but is already drawn by neighboring slots
@@ -385,7 +401,7 @@
     var byTheta = {};
     positions.forEach(function (ps) { byTheta[ps.theta] = ps.n; });
     placedList.forEach(function (pc) { pc.pos = byTheta[pc.theta]; });
-    return { pieces: placedList, positions: positions, failed: failed, noLabel: noLabel };
+    return { pieces: placedList, positions: positions, failed: failed, noLabel: noLabel, unclear: unclear };
   }
 
   // Several passes with small variations; keeps the best one
@@ -397,7 +413,7 @@
       var q = Object.assign({}, p, { rand: rand, jitter: t < 3 ? 0 : 0.8, strategy: strat });
       var r = layout(polylines, q);
       var failLen = r.failed.reduce(function (a, f) { return a + f.len + 1; }, 0);
-      r.score = failLen * 1000 + r.noLabel * 20 + r.positions.length;
+      r.score = failLen * 1000 + r.noLabel * 20 + r.unclear * 3 + r.positions.length;
       r.strategy = strat;
       if (!best || r.score < best.score) best = r;
     }

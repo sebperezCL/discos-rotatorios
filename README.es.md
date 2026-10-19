@@ -25,6 +25,8 @@ La interfaz está en inglés y español. Sigue el idioma del navegador y se pued
 
 Medidas por defecto tomadas del modelo Dog Man de MakerWorld (120 mm, cuerpo 0,8 mm, números en relieve 0,32 mm, ranuras de 1,25 mm): aquí 120 mm, cuerpo 0,84 mm (cuadra con capas de 0,2 + 0,16), números 0,32 mm, ranuras 1,3 mm, puente 1,5 mm.
 
+Los números miden 4 mm de alto con trazo de 0,9 mm (dos líneas de una boquilla de 0,4 mm) para que se lean bien impresos. El 1 lleva base y el 9 tiene el palo recto, así que ningún número se confunde con otro dado vuelta. Cada número queda al menos 1,5 mm («Holgura de los números») más lejos de las otras ranuras que de la suya, para que se vea claro a cuál pertenece. Si no hay sitio, como último recurso se usa un número algo más pequeño.
+
 ## Convenciones
 
 - Coordenadas en mm, y hacia arriba, origen en el centro del disco.
