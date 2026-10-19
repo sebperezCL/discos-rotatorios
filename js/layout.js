@@ -1,13 +1,13 @@
-// Distribución: corta el dibujo en piezas y busca para cada pieza un ángulo de giro
-// del disco en el que su ranura no choque con las demás.
+// Layout: cuts the drawing into pieces and, for each piece, looks for a disc rotation
+// angle where its slot doesn't collide with the others.
 //
-// Convenciones (mm, y hacia arriba, origen = centro del disco):
-//  - "papel": coordenadas fijas del dibujo bajo el disco.
-//  - "disco": coordenadas del propio disco. Si el disco está girado θ (antihorario),
-//    un punto del disco q aparece en el papel en R(θ)·q, así que la ranura de una pieza
-//    asignada a θ es R(-θ)·pieza.
-//  - La muesca de la posición con giro θ está en el ángulo 90°-θ del disco
-//    (queda arriba, frente a la marca del soporte, cuando el disco está girado θ).
+// Conventions (mm, y up, origin = disc center):
+//  - "paper": fixed coordinates of the drawing under the disc.
+//  - "disc": coordinates on the disc itself. If the disc is rotated by θ (counterclockwise),
+//    a disc point q appears on the paper at R(θ)·q, so the slot of a piece
+//    assigned to θ is R(-θ)·piece.
+//  - The notch for the position with rotation θ is at angle 90°-θ on the disc
+//    (it sits at the top, facing the holder's mark, when the disc is rotated by θ).
 (function (root) {
   'use strict';
   var D2R = Math.PI / 180;
@@ -15,7 +15,7 @@
   function plen(p) { var s = 0; for (var i = 1; i < p.length; i++) s += Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]); return s; }
   function rot(p, a) { var c = Math.cos(a), s = Math.sin(a); return [c * p[0] - s * p[1], s * p[0] + c * p[1]]; }
 
-  // Re-muestrea una polilínea cada `step` mm (conserva extremos)
+  // Resamples a polyline every `step` mm (keeps the endpoints)
   function resample(p, step) {
     if (p.length < 2) return p.map(function (a) { return a.slice(); });
     var out = [p[0].slice()], acc = 0;
@@ -30,7 +30,7 @@
     return out;
   }
 
-  // Corta la polilínea en la longitud de arco `at`
+  // Cuts the polyline at arc length `at`
   function splitAt(p, at) {
     var acc = 0;
     for (var i = 1; i < p.length; i++) {
@@ -53,8 +53,8 @@
     return out;
   }
 
-  // ¿La pieza se toca a sí misma? (formaría una isla o una lengüeta frágil)
-  // Devuelve la longitud de arco donde conviene cortarla, o -1.
+  // Does the piece touch itself? (it would form an island or a fragile tab)
+  // Returns the arc length where it should be cut, or -1.
   function selfContact(p, minDist) {
     var s = resample(p, 0.3), arc = [0];
     for (var i = 1; i < s.length; i++) arc.push(arc[i - 1] + Math.hypot(s[i][0] - s[i - 1][0], s[i][1] - s[i - 1][1]));
@@ -68,7 +68,7 @@
     return best;
   }
 
-  // Rejilla espacial de puntos de ranuras ya colocadas
+  // Spatial grid of points from slots already placed
   function Grid(cell) { this.cell = cell; this.map = new Map(); }
   Grid.prototype.key = function (x, y) { return Math.floor(x / this.cell) * 73856093 ^ Math.floor(y / this.cell) * 19349663; };
   Grid.prototype.add = function (x, y, id) {
@@ -77,7 +77,7 @@
     a.push(x, y, id);
   };
   Grid.prototype.near = function (x, y, r) {
-    // ¿hay algún punto a distancia < r?
+    // is there any point closer than r?
     var c = this.cell, n = Math.ceil(r / c), cx = Math.floor(x / c), cy = Math.floor(y / c), r2 = r * r;
     for (var i = -n; i <= n; i++) for (var j = -n; j <= n; j++) {
       var a = this.map.get((cx + i) * 73856093 ^ (cy + j) * 19349663);
@@ -90,14 +90,14 @@
     return false;
   };
 
-  // Une cadenas que se encuentran en un mismo nodo siguiendo la dirección más recta,
-  // para evitar trocitos sueltos en los cruces.
+  // Joins chains that meet at the same node following the straightest direction,
+  // to avoid loose bits at crossings.
   function mergeChains(polys, tol, tinyLen) {
     var chains = polys.filter(function (p) { return p.length >= 2; }).map(function (p) { return p.slice(); });
     var dots = polys.filter(function (p) { return p.length < 2; });
     function key(q) { return Math.round(q[0] / tol) + ',' + Math.round(q[1] / tol); }
     function dir(p, atStart) {
-      // dirección saliendo del nodo, medida ~2 mm hacia dentro de la cadena
+      // direction leaving the node, measured ~2 mm into the chain
       var a = atStart ? p[0] : p[p.length - 1], acc = 0, i = atStart ? 1 : p.length - 2, b = a;
       while (i >= 0 && i < p.length) { b = p[i]; acc = Math.hypot(b[0] - a[0], b[1] - a[1]); if (acc > 2) break; i += atStart ? 1 : -1; }
       var l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
@@ -108,7 +108,7 @@
       changed = false;
       var ends = {};
       chains.forEach(function (c, i) {
-        if (Math.hypot(c[0][0] - c[c.length - 1][0], c[0][1] - c[c.length - 1][1]) < tol) return; // lazo cerrado
+        if (Math.hypot(c[0][0] - c[c.length - 1][0], c[0][1] - c[c.length - 1][1]) < tol) return; // closed loop
         (ends[key(c[0])] = ends[key(c[0])] || []).push({ i: i, start: true });
         (ends[key(c[c.length - 1])] = ends[key(c[c.length - 1])] || []).push({ i: i, start: false });
       });
@@ -119,8 +119,8 @@
         for (var a = 0; a < e.length; a++) for (var b = a + 1; b < e.length; b++) {
           if (e[a].i === e[b].i) continue;
           var da = dir(chains[e[a].i], e[a].start), db = dir(chains[e[b].i], e[b].start);
-          var straight = -(da[0] * db[0] + da[1] * db[1]);    // 1 = continúan en línea recta
-          // los trocitos muy cortos se pegan al vecino aunque formen esquina
+          var straight = -(da[0] * db[0] + da[1] * db[1]);    // 1 = they continue in a straight line
+          // very short bits are attached to their neighbor even if they form a corner
           var tiny = plen(chains[e[a].i]) < tinyLen || plen(chains[e[b].i]) < tinyLen;
           var sc = tiny ? straight + 2 : straight;
           if ((straight > 0.35 || tiny) && (!best || sc > best.s)) best = { s: sc, a: e[a], b: e[b] };
@@ -139,7 +139,7 @@
     return chains.concat(dots);
   }
 
-  // Rejilla raster de ocupación (para números)
+  // Raster occupancy grid (for numbers)
   function Occ(R, cell) { this.cell = cell; this.n = Math.ceil(2 * R / cell) + 2; this.R = R; this.a = new Uint8Array(this.n * this.n); }
   Occ.prototype.idx = function (x, y) {
     var i = Math.floor((x + this.R) / this.cell), j = Math.floor((y + this.R) / this.cell);
@@ -174,7 +174,7 @@
   };
 
   /**
-   * Coloca el dibujo (polilíneas en px de imagen) en el papel.
+   * Places the drawing (polylines in image px) on the paper.
    * p: { sizeMm, rMax, dirDeg, offsetMm (null=auto) }
    */
   function placeDrawing(polylines, p) {
@@ -182,7 +182,7 @@
     polylines.forEach(function (pl) { pl.forEach(function (q) { minX = Math.min(minX, q[0]); maxX = Math.max(maxX, q[0]); minY = Math.min(minY, q[1]); maxY = Math.max(maxY, q[1]); }); });
     var w = maxX - minX, h = maxY - minY, cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
     if (p.autoSize) {
-      // el mayor tamaño que deja el dibujo dentro del anillo [rMin, rMax]
+      // the largest size that keeps the drawing inside the ring [rMin, rMax]
       var lo = 5, hi = 2 * p.rMax;
       for (var it0 = 0; it0 < 30; it0++) {
         var mid0 = (lo + hi) / 2, t = placeDrawing(polylines, Object.assign({}, p, { autoSize: false, sizeMm: mid0, offsetMm: null }));
@@ -191,7 +191,7 @@
       return placeDrawing(polylines, Object.assign({}, p, { autoSize: false, sizeMm: Math.floor(lo * 2) / 2, offsetMm: null }));
     }
     var size = p.sizeMm, s = size / Math.max(w, h, 1e-9);
-    // centrado en el origen, y hacia arriba
+    // centered on the origin, y up
     var base = polylines.map(function (pl) { return pl.map(function (q) { return [(q[0] - cx) * s, -(q[1] - cy) * s]; }); });
     var u = [Math.cos(p.dirDeg * D2R), Math.sin(p.dirDeg * D2R)];
     function maxR(d) {
@@ -199,7 +199,7 @@
       base.forEach(function (pl) { pl.forEach(function (q) { m = Math.max(m, Math.hypot(q[0] + u[0] * d, q[1] + u[1] * d)); }); });
       return m;
     }
-    var scaleFix = 1, warn = [];   // avisos como { key, vars } para traducir en la interfaz
+    var scaleFix = 1, warn = [];   // warnings as { key, vars }, translated by the interface
     var r0 = maxR(0) + p.slotW / 2;
     if (r0 > p.rMax) {
       scaleFix = (p.rMax - p.slotW / 2) / maxR(0);
@@ -226,11 +226,11 @@
   }
 
   /**
-   * Corta en piezas y asigna giros.
-   * p: { slotW, gap, maxLen, angleStep, minSepDeg, maxPerPos (0 = sin límite), rMax }
+   * Cuts into pieces and assigns rotations.
+   * p: { slotW, gap, maxLen, angleStep, minSepDeg, maxPerPos (0 = no limit), rMax }
    */
   function layout(polylines, p) {
-    var minD = p.slotW + p.gap;                       // distancia mínima entre ejes de ranuras
+    var minD = p.slotW + p.gap;                       // minimum distance between slot centerlines
     var pieces = [];
     polylines = mergeChains(polylines, 0.25, 2 * p.slotW);
     polylines.forEach(function (pl) {
@@ -239,7 +239,7 @@
       var n = Math.max(closed ? 2 : 1, Math.ceil(L / p.maxLen));
       splitN(pl, n).forEach(function (q) { pieces.push(q); });
     });
-    // cortar piezas que se tocan a sí mismas
+    // cut pieces that touch themselves
     var queue = pieces.slice(), ok = [];
     while (queue.length) {
       var pc = queue.pop();
@@ -251,7 +251,7 @@
     }
     var removed = {};
     pieces = ok.map(function (q) { return { pts: q, len: plen(q), samples: resample(q, 0.35) }; });
-    // Piezas diminutas ya cubiertas por los extremos redondeados de sus vecinas → fuera
+    // Tiny pieces already covered by their neighbors' rounded ends → dropped
     var cov = new Grid(p.slotW);
     pieces.forEach(function (pc, i) { pc.samples.forEach(function (q) { cov.add(q[0], q[1], i); }); });
     pieces = pieces.filter(function (pc, i) {
@@ -287,8 +287,8 @@
       }
       return true;
     }
-    // Busca un sitio para el número junto a la ranura (girado para leerse derecho
-    // cuando esa posición está arriba).
+    // Looks for a spot for the number next to the slot (rotated to read upright
+    // when that position is at the top).
     function findLabel(S, th) {
       var ang = -th * D2R, ax = [Math.cos(ang), Math.sin(ang)], ay = [-Math.sin(ang), Math.cos(ang)];
       var L = S.length, cands = [], idxs = [];
@@ -343,7 +343,7 @@
         if (lab) { chosen = cands[k]; break; }
       }
       if (!chosen && cands.length) {
-        if (pc.len > Math.max(4, 3 * minD)) chosen = null;   // mejor partirla para que quepa su número
+        if (pc.len > Math.max(4, 3 * minD)) chosen = null;   // better to split it so its number fits
         else { chosen = cands[0]; lab = null; noLabel++; }
       }
       if (!chosen) {
@@ -363,8 +363,8 @@
       if (lab) { occLab.markBox(lab.x, lab.y, lab.ang, lbw + 2 * lm, lbh + 2 * lm); occSlot.markBox(lab.x, lab.y, lab.ang, lbw + 0.6, lbh + 0.6); }
       placedList.push(pc);
     }
-    // Un trozo que no cupo pero que ya queda pintado por las ranuras vecinas
-    // (sus extremos redondeados lo cubren) no hace falta
+    // A piece that didn't fit but is already drawn by neighboring slots
+    // (their rounded ends cover it) isn't needed
     if (failed.length) {
       var ink = new Grid(p.slotW);
       placedList.forEach(function (pc) { pc.samples.forEach(function (q) { ink.add(q[0], q[1], 0); }); });
@@ -372,8 +372,8 @@
         return !pc.samples.every(function (q) { return ink.near(q[0], q[1], p.slotW * 0.5); });
       });
     }
-    // numerar posiciones: girando el disco en sentido horario aparecen 1, 2, 3...
-    // (θ decreciente). La 1 es la más cercana a la marca superior.
+    // number the positions: turning the disc clockwise shows 1, 2, 3...
+    // (decreasing θ). Position 1 is the closest to the top mark.
     used.sort(function (a, b) { return b - a; });
     var startIdx = 0, bestA = 999;
     used.forEach(function (th, i) { var v = ((th % 360) + 360) % 360; if (v < bestA) { bestA = v; startIdx = i; } });
@@ -388,7 +388,7 @@
     return { pieces: placedList, positions: positions, failed: failed, noLabel: noLabel };
   }
 
-  // Varias pasadas con pequeñas variaciones; se queda con la mejor
+  // Several passes with small variations; keeps the best one
   function layoutBest(polylines, p, tries) {
     var best = null, seed = 12345;
     function rand() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
@@ -404,7 +404,7 @@
     return best;
   }
 
-  // Dibuja la "imagen" que queda en el papel tras trazar todas las posiciones (para verificar)
+  // Builds the "image" left on the paper after drawing every position (for checking)
   function reconstruct(pieces, positions) {
     var th = {}; positions.forEach(function (p) { th[p.n] = p.theta; });
     return pieces.map(function (pc) {

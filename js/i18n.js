@@ -1,4 +1,4 @@
-// Idiomas de la interfaz (inglés por defecto, español). Textos con {variables}.
+// Interface languages (English by default, Spanish). Strings may contain {variables}.
 (function () {
   'use strict';
   var STR = {
@@ -217,7 +217,7 @@
     if (s == null) s = STR.en[key] != null ? STR.en[key] : key;
     return vars ? s.replace(/\{(\w+)\}/g, function (m, k) { return vars[k] != null ? vars[k] : m; }) : s;
   }
-  // data-i18n → textContent, data-i18n-html → innerHTML (textos con marcas propias)
+  // data-i18n → textContent, data-i18n-html → innerHTML (strings with their own markup)
   function apply(root) {
     root = root || document;
     [].forEach.call(root.querySelectorAll('[data-i18n]'), function (el) { el.textContent = t(el.getAttribute('data-i18n')); });

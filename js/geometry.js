@@ -1,13 +1,13 @@
-// Geometría 2D/3D del disco: ranuras, números, muescas, marco y extrusión a mallas.
-// Necesita ClipperLib (lib/clipper.js) y earcut (lib/earcut.min.js).
+// 2D/3D disc geometry: slots, numbers, notches, frame and extrusion into meshes.
+// Requires ClipperLib (lib/clipper.js) and earcut (lib/earcut.min.js).
 (function (root) {
   'use strict';
   var ClipperLib = root.ClipperLib || (typeof require !== 'undefined' ? require('../lib/clipper.js') : null);
   var earcut = root.earcut || (typeof require !== 'undefined' ? require('../lib/earcut.min.js') : null);
-  var SC = 1000; // Clipper trabaja en enteros: 1 unidad = 1 µm
+  var SC = 1000; // Clipper works with integers: 1 unit = 1 µm
   var D2R = Math.PI / 180;
 
-  // ---------- Tipografía de trazo para dígitos (caja 0..0.6 x 0..1, y hacia arriba) ----------
+  // ---------- Stroke font for digits (box 0..0.6 x 0..1, y up) ----------
   function arc(cx, cy, rx, ry, a0, a1, n) {
     var out = []; n = n || 24;
     for (var i = 0; i <= n; i++) { var a = (a0 + (a1 - a0) * i / n) * D2R; out.push([cx + rx * Math.cos(a), cy + ry * Math.sin(a)]); }
@@ -36,7 +36,7 @@
 
   function textWidth(str, h, sw) { var hh = h - sw; return str.length * ADV * hh + (str.length - 1) * SPACING * hh + sw; }
 
-  // Trazos (centro de línea) de un texto centrado en (cx,cy) girado `ang` rad, altura total h
+  // Strokes (centerlines) of a text centered at (cx,cy), rotated `ang` rad, total height h
   function textStrokes(str, cx, cy, ang, h, sw) {
     var hh = h - sw, tw = str.length * ADV * hh + (str.length - 1) * SPACING * hh;
     var c = Math.cos(ang), s = Math.sin(ang), out = [];
@@ -82,7 +82,7 @@
     if (clip && clip.length) c.AddPaths(clip, ClipperLib.PolyType.ptClip, true);
     c.Execute(type, tree, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
     var ex = ClipperLib.JS.PolyTreeToExPolygons(tree);
-    // limpiar vértices casi colineales/duplicados (evita aristas degeneradas en la malla)
+    // clean up nearly collinear/duplicate vertices (avoids degenerate mesh edges)
     ex.forEach(function (e) {
       e.outer = ClipperLib.Clipper.CleanPolygon(e.outer, 2);
       e.holes = (e.holes || []).map(function (h) { return ClipperLib.Clipper.CleanPolygon(h, 2); }).filter(function (h) { return h.length >= 3; });
@@ -92,26 +92,26 @@
   var CT = function () { return ClipperLib.ClipType; };
 
   /**
-   * Construye toda la geometría 2D.
-   * lay: resultado de DDLayout.layout; p: parámetros (ver app.js)
+   * Builds all the 2D geometry.
+   * lay: result of DDLayout.layout; p: parameters (see app.js)
    */
   function build2D(lay, drawingBBox, p) {
     var R = p.diameter / 2;
     var disc = [circlePath(R, 360)];
 
-    // Ranuras
+    // Slots
     var slotStrokes = lay.pieces.map(function (pc) { return { pts: pc.disc }; });
     var slots = boolOp(CT().ctUnion, offsetStrokes(slotStrokes, p.slotW));
     var body = boolOp(CT().ctDifference, disc, slots);
 
-    // Números junto a cada ranura (ya colocados por el reparto)
+    // Numbers next to each slot (already placed by the layout)
     var labels = [], missing = [];
     lay.pieces.forEach(function (pc) {
       if (pc.label) labels.push({ txt: String(pc.pos), x: pc.label.x, y: pc.label.y, ang: pc.label.ang });
       else missing.push(pc.pos);
     });
 
-    // Muescas y números del borde
+    // Rim notches and numbers
     var rimStrokes = [], tickStrokes = [];
     lay.positions.forEach(function (ps) {
       var a = ps.tickDeg * D2R, u = [Math.cos(a), Math.sin(a)];
@@ -125,7 +125,7 @@
     var numbers = boolOp(CT().ctUnion, offsetStrokes(labelStrokes.concat(rimStrokes), p.labelStroke).concat(offsetStrokes(tickStrokes, p.tickW)));
     numbers = boolOp(CT().ctIntersection, numbers, body);
 
-    // Marco de referencia (posición 1): ranura poco profunda en la cara superior
+    // Reference frame (position 1): shallow groove on the top face
     var frame = null;
     if (p.frame && lay.positions.length && drawingBBox) {
       var th = lay.positions[0].theta * D2R, m = p.slotW / 2 + 1;
@@ -137,9 +137,9 @@
     return { R: R, disc: disc, slots: slots, body: body, numbers: numbers, frame: frame, labels: labels, missingLabels: missing };
   }
 
-  // earcut puede dejar triángulos de área cero cuando hay vértices colineales entre
-  // agujeros; eso crea uniones en T. Cada triángulo plano (a,m,b) se elimina partiendo
-  // el triángulo vecino que usa la arista (a,b).
+  // earcut can leave zero-area triangles when there are collinear vertices between
+  // holes; that creates T-junctions. Each flat triangle (a,m,b) is removed by splitting
+  // the neighboring triangle that uses edge (a,b).
   function fixDegenerate(tri, flat) {
     function area(a, b, c) { return (flat[2 * b] - flat[2 * a]) * (flat[2 * c + 1] - flat[2 * a + 1]) - (flat[2 * b + 1] - flat[2 * a + 1]) * (flat[2 * c] - flat[2 * a]); }
     function d2(a, b) { var dx = flat[2 * a] - flat[2 * b], dy = flat[2 * a + 1] - flat[2 * b + 1]; return dx * dx + dy * dy; }
@@ -150,7 +150,7 @@
       for (i = 0; i < T.length; i++) if (T[i] && Math.abs(area(T[i][0], T[i][1], T[i][2])) < 1e-9) { di = i; break; }
       if (di < 0) break;
       var t = T[di]; T[di] = null;
-      // m = el vértice del medio (el que no es extremo del lado más largo)
+      // m = the middle vertex (the one that isn't an end of the longest side)
       var e = [[0, 1, 2], [1, 2, 0], [2, 0, 1]].sort(function (x, y) { return d2(t[y[0]], t[y[1]]) - d2(t[x[0]], t[x[1]]); })[0];
       var a = t[e[0]], b = t[e[1]], m = t[e[2]];
       for (i = 0; i < T.length; i++) {
@@ -163,7 +163,7 @@
         break;
       }
     }
-    // Uniones en T: si un vértice cae sobre el lado de un triángulo, se parte el triángulo
+    // T-junctions: if a vertex lies on a triangle's side, the triangle is split
     var cell = 1, grid = new Map(), nV = flat.length / 2;
     for (i = 0; i < nV; i++) {
       var k = Math.floor(flat[2 * i] / cell) + ',' + Math.floor(flat[2 * i + 1] / cell);
@@ -202,7 +202,7 @@
     return out;
   }
 
-  // ---------- Extrusión ----------
+  // ---------- Extrusion ----------
   function Mesh() { this.v = []; this.t = []; }
   Mesh.prototype.addPrism = function (expolys, z0, z1) {
     var self = this;
@@ -226,8 +226,8 @@
         var a = tri[k], b = tri[k + 1], c = tri[k + 2];
         var cr = (flat[2 * b] - flat[2 * a]) * (flat[2 * c + 1] - flat[2 * a + 1]) - (flat[2 * b + 1] - flat[2 * a + 1]) * (flat[2 * c] - flat[2 * a]);
         if (cr < 0) { var tmp = b; b = c; c = tmp; }
-        self.t.push([base0 + n + a, base0 + n + b, base0 + n + c]);   // tapa superior (normal +z)
-        self.t.push([base0 + a, base0 + c, base0 + b]);               // tapa inferior (normal -z)
+        self.t.push([base0 + n + a, base0 + n + b, base0 + n + c]);   // top cap (normal +z)
+        self.t.push([base0 + a, base0 + c, base0 + b]);               // bottom cap (normal -z)
       }
       var off = 0;
       rings.forEach(function (r) {
@@ -248,8 +248,8 @@
     return this;
   };
 
-  // Apertura + cierre morfológico de 10 µm: elimina paredes de grosor cero y fusiona
-  // regiones que se tocan sólo en una línea o un punto (evita mallas no cerradas)
+  // 10 µm morphological opening + closing: removes zero-thickness walls and merges
+  // regions that touch only along a line or at a point (avoids non-closed meshes)
   function closeTiny(paths) {
     function off(src, d) {
       var co = new ClipperLib.ClipperOffset(2, 1), out = new ClipperLib.Paths();

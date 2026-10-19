@@ -1,4 +1,4 @@
-// Interfaz: carga de imagen, parámetros, vistas previas y descargas.
+// Interface: image loading, parameters, previews and downloads.
 (function () {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
@@ -6,7 +6,7 @@
   var D2R = Math.PI / 180;
   var t = DDI18n.t;
 
-  // ---------- Parámetros ----------
+  // ---------- Parameters ----------
   function num(id) { return parseFloat($(id).value); }
   function chk(id) { return $(id).checked; }
   function params() {
@@ -24,8 +24,8 @@
       discColor: $('discColor').value, numColor: $('numColor').value
     };
     var R = p.diameter / 2;
-    p.rimZone = p.tickLen + 1.4 + p.rimNumH + 0.8;              // franja exterior para muescas y números
-    p.rMax = R - p.rimZone - 0.5;                                 // radio máximo para las ranuras
+    p.rimZone = p.tickLen + 1.4 + p.rimNumH + 0.8;              // outer band for notches and numbers
+    p.rMax = R - p.rimZone - 0.5;                                 // maximum radius for slots
     var rnInner = R - p.tickLen - 1.4 - p.rimNumH;
     var autoSep = (DDGeometry.textWidth('88', p.rimNumH, p.labelStroke) + 1.0) / rnInner / D2R;
     p.minSepDeg = num('minSepDeg') > 0 ? num('minSepDeg') : Math.ceil(autoSep * 2) / 2;
@@ -33,7 +33,7 @@
     return p;
   }
 
-  // ---------- Imagen ----------
+  // ---------- Image ----------
   function ingest(source, w, h, name, thumbUrl, noteKey) {
     var max = 1000, s = Math.min(1, max / Math.max(w, h));
     var W = Math.round(w * s), H = Math.round(h * s);
@@ -56,27 +56,27 @@
     img.onload = function () { ingest(img, img.width, img.height, name, url, null); };
     img.src = url;
   }
-  // Dibujo de ejemplo (un gato) para que la página abra mostrando un disco
+  // Sample drawing (a cat) so the page opens showing a disc
   function loadSample() {
     var c = document.createElement('canvas'); c.width = 800; c.height = 640;
     var x = c.getContext('2d');
     x.fillStyle = '#fff'; x.fillRect(0, 0, 800, 640);
     x.strokeStyle = '#000'; x.fillStyle = '#000'; x.lineWidth = 9; x.lineCap = x.lineJoin = 'round';
     function P(f) { x.beginPath(); f(); x.stroke(); }
-    P(function () { x.ellipse(400, 250, 170, 140, 0, 0, Math.PI * 2); });                       // cabeza
-    P(function () { x.moveTo(265, 170); x.lineTo(250, 50); x.lineTo(345, 120); });              // oreja izq.
-    P(function () { x.moveTo(535, 170); x.lineTo(550, 50); x.lineTo(455, 120); });              // oreja der.
-    P(function () { x.ellipse(335, 235, 26, 34, 0, 0, Math.PI * 2); });                         // ojos
+    P(function () { x.ellipse(400, 250, 170, 140, 0, 0, Math.PI * 2); });                       // head
+    P(function () { x.moveTo(265, 170); x.lineTo(250, 50); x.lineTo(345, 120); });              // left ear
+    P(function () { x.moveTo(535, 170); x.lineTo(550, 50); x.lineTo(455, 120); });              // right ear
+    P(function () { x.ellipse(335, 235, 26, 34, 0, 0, Math.PI * 2); });                         // eyes
     P(function () { x.ellipse(465, 235, 26, 34, 0, 0, Math.PI * 2); });
     x.beginPath(); x.arc(340, 242, 10, 0, 7); x.fill(); x.beginPath(); x.arc(470, 242, 10, 0, 7); x.fill();
-    P(function () { x.moveTo(385, 290); x.lineTo(415, 290); x.lineTo(400, 308); x.closePath(); }); // nariz
-    P(function () { x.moveTo(400, 308); x.quadraticCurveTo(395, 335, 370, 335); });             // boca
+    P(function () { x.moveTo(385, 290); x.lineTo(415, 290); x.lineTo(400, 308); x.closePath(); }); // nose
+    P(function () { x.moveTo(400, 308); x.quadraticCurveTo(395, 335, 370, 335); });             // mouth
     P(function () { x.moveTo(400, 308); x.quadraticCurveTo(405, 335, 430, 335); });
-    P(function () { x.moveTo(300, 300); x.lineTo(180, 285); x.moveTo(300, 315); x.lineTo(185, 330); });   // bigotes
+    P(function () { x.moveTo(300, 300); x.lineTo(180, 285); x.moveTo(300, 315); x.lineTo(185, 330); });   // whiskers
     P(function () { x.moveTo(500, 300); x.lineTo(620, 285); x.moveTo(500, 315); x.lineTo(615, 330); });
-    P(function () { x.moveTo(300, 370); x.quadraticCurveTo(250, 520, 290, 600); x.lineTo(510, 600); x.quadraticCurveTo(550, 520, 500, 370); }); // cuerpo
-    P(function () { x.moveTo(370, 600); x.lineTo(370, 540); x.moveTo(430, 600); x.lineTo(430, 540); });   // patas
-    P(function () { x.moveTo(510, 590); x.bezierCurveTo(650, 600, 700, 480, 640, 420); });      // cola
+    P(function () { x.moveTo(300, 370); x.quadraticCurveTo(250, 520, 290, 600); x.lineTo(510, 600); x.quadraticCurveTo(550, 520, 500, 370); }); // body
+    P(function () { x.moveTo(370, 600); x.lineTo(370, 540); x.moveTo(430, 600); x.lineTo(430, 540); });   // legs
+    P(function () { x.moveTo(510, 590); x.bezierCurveTo(650, 600, 700, 480, 640, 420); });      // tail
     ingest(c, 800, 640, 'sample', c.toDataURL(), 'sample.note');
   }
   var drop = $('drop');
@@ -86,7 +86,7 @@
   ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
   drop.addEventListener('drop', function (e) { loadFile(e.dataTransfer.files[0]); });
 
-  // ---------- Generación ----------
+  // ---------- Generation ----------
   var vecKey = null;
   function generate() {
     if (!state.gray) return;
@@ -112,8 +112,8 @@
     }
     var pd, lay;
     if (p.autoDir) {
-      // Prueba el dibujo arriba, abajo y a los lados del centro y se queda con el que reparte mejor:
-      // lo que queda cerca del centro casi no se mueve al girar, así que conviene alejar la parte más cargada.
+      // Try the drawing above, below and to the sides of the center and keep the best layout:
+      // whatever is near the center barely moves when turning, so the busiest part should go farther out.
       var best = null;
       [90, 270, 0, 180].forEach(function (dir) {
         var pdi = place(dir), li = DDLayout.layoutBest(pdi.polylines, p, p.tries);
@@ -127,7 +127,7 @@
       lay = DDLayout.layoutBest(pd.polylines, p, p.tries);
     }
     if (p.autoSize) {
-      // Si faltan sitios o números, se achica un poco el dibujo y se reintenta
+      // If pieces or numbers don't fit, shrink the drawing a little and retry
       var dirUsed = p.autoDir ? +$('dirDeg').value : p.dirDeg;
       for (var shrink = 0; shrink < 4 && (lay.failed.length || lay.noLabel); shrink++) {
         var pd2 = DDLayout.placeDrawing(state.vec.polylines, { sizeMm: pd.sizeMm - 1.5, autoSize: false, rMax: p.rMax, dirDeg: dirUsed, offsetMm: p.offsetMm, slotW: p.slotW });
@@ -153,7 +153,7 @@
     ['dl3mf', 'dl3mfLayer', 'dlStlBody', 'dlStlNum', 'dlSvg', 'dlZip'].forEach(function (id) { $(id).disabled = false; });
   }
   function uniq(a) { return a.filter(function (x, i) { return a.indexOf(x) === i; }).sort(function (x, y) { return x - y; }); }
-  // Los mensajes y textos dinámicos se guardan como claves para poder cambiar de idioma sin recalcular
+  // Messages and dynamic texts are kept as keys so the language can change without recomputing
   var lastMsgs = [];
   function msgText(x) {
     var v = {};
@@ -178,12 +178,12 @@
     $('thumbNote').hidden = !state.noteKey;
   }
 
-  // ---------- Vistas ----------
+  // ---------- Views ----------
   function drawDisc() {
     var r = state.result, R = r.g.R, m = 4;
     var svg = DDExport.svg(r.g, { disc: r.p.discColor, num: r.p.numColor });
     svg = svg.replace(/width="[^"]+" height="[^"]+" viewBox="[^"]+"/, 'viewBox="' + (-R - m) + ' ' + (-R - m) + ' ' + (2 * R + 2 * m) + ' ' + (2 * R + 2 * m) + '"');
-    // marca de "arriba" del soporte
+    // holder's "top" mark
     svg = svg.replace('</svg>', '<path d="M0 ' + (-R - 0.6) + ' l-2 -3 h4 z" fill="currentColor" opacity=".6"/></svg>');
     $('discStage').innerHTML = svg;
   }
@@ -201,7 +201,7 @@
     });
   }
 
-  // Simulación: el papel queda fijo; el disco gira a cada posición
+  // Simulation: the paper stays fixed; the disc turns to each position
   var simTimer = null;
   function setupSim() {
     var n = state.result.lay.positions.length;
@@ -223,7 +223,7 @@
       ctx.strokeStyle = ctx.fillStyle = pc.pos === k && k <= r.lay.positions.length ? '#e4572e' : tok('--trace');
       path(pc.pts);
     });
-    // trozos que no cupieron
+    // pieces that didn't fit
     ctx.strokeStyle = ctx.fillStyle = 'rgba(220,38,38,.9)';
     r.lay.failed.forEach(function (f) { path(f.pts); });
     function path(pts) {
@@ -231,7 +231,7 @@
       ctx.beginPath(); pts.forEach(function (q, i) { i ? ctx.lineTo(X(q), Y(q)) : ctx.moveTo(X(q), Y(q)); }); ctx.stroke();
     }
     if (k >= 1 && k <= r.lay.positions.length) {
-      // disco girado θ_k: un punto del disco q aparece en R(θ)·q
+      // disc rotated by θ_k: a disc point q shows up at R(θ)·q
       var th = r.lay.positions[k - 1].theta * D2R;
       ctx.save(); ctx.translate(cx, cy); ctx.rotate(-th);
       ctx.globalAlpha = 0.18; ctx.fillStyle = p.discColor;
@@ -245,7 +245,7 @@
       });
       ctx.restore();
     }
-    // marca superior del soporte
+    // holder's top mark
     ctx.fillStyle = tok('--ink');
     ctx.beginPath(); ctx.moveTo(cx, cy - R * sc - 2); ctx.lineTo(cx - 9, cy - R * sc - 16); ctx.lineTo(cx + 9, cy - R * sc - 16); ctx.fill();
     var n = r.lay.positions.length;
@@ -261,16 +261,16 @@
     simTimer = setInterval(function () { $('simStep').value = k; drawSim(k); k++; if (k > n + 1) stopPlay(); }, 700);
   });
 
-  // ---------- Pestañas ----------
+  // ---------- Tabs ----------
   $('tabs').addEventListener('click', function (e) {
     var tab = e.target.getAttribute('data-tab'); if (!tab) return;
     [].forEach.call(document.querySelectorAll('#tabs button'), function (b) { b.classList.toggle('on', b === e.target); });
     [].forEach.call(document.querySelectorAll('[data-pane]'), function (pn) { pn.hidden = pn.getAttribute('data-pane') !== tab; });
   });
 
-  // ---------- Descargas ----------
-  // En claude.ai las descargas pasan por la capacidad "downloads", que no acepta .3mf/.stl:
-  // esos archivos se entregan dentro de un .zip. Abierta como archivo local, descarga directa.
+  // ---------- Downloads ----------
+  // On claude.ai downloads go through the "downloads" capability, which doesn't accept .3mf/.stl:
+  // those files are delivered inside a .zip. Opened as a local file, it downloads directly.
   var dlCap = null, ALLOWED = /\.(svg|zip|png|json|txt)$/i;
   if (window.claude && window.claude.use) window.claude.use('downloads').then(function (d) { dlCap = d; }).catch(function () {});
   function save(data, name, type) {
@@ -293,7 +293,7 @@
     return o;
   }
   function changeZ(p) {
-    // primera capa que ya es sólo números (su mitad queda por encima del disco)
+    // first layer that is numbers only (its midpoint is above the disc)
     var z = p.firstLayer;
     while (z - p.layerH / 2 < p.thickness - 1e-9) z += p.layerH;
     return Math.round(z * 1000) / 1000;
@@ -322,13 +322,13 @@
     ]), b + '.zip', 'application/zip');
   });
   $('go').addEventListener('click', generate);
-  // los colores sólo cambian la vista previa
+  // colors only change the preview
   ['discColor', 'numColor'].forEach(function (id) { $(id).addEventListener('input', function () { if (state.result) { state.result.p.discColor = $('discColor').value; state.result.p.numColor = $('numColor').value; drawDisc(); drawSim(+$('simStep').value); } }); });
   $('autoSize').addEventListener('change', function () { $('sizeMm').disabled = this.checked; });
   $('autoOffset').addEventListener('change', function () { $('offsetMm').disabled = this.checked; });
   $('autoDir').addEventListener('change', function () { $('dirDeg').disabled = this.checked; });
   $('sizeMm').disabled = true; $('offsetMm').disabled = true; $('dirDeg').disabled = true;
-  // ---------- Idioma ----------
+  // ---------- Language ----------
   $('lang').value = DDI18n.lang();
   $('lang').addEventListener('change', function () { DDI18n.setLang(this.value); });
   DDI18n.onChange(function () {

@@ -1,8 +1,8 @@
-// Exportación: 3MF (Bambu Studio / Orca / Prusa), STL binario y SVG.
+// Export: 3MF (Bambu Studio / Orca / Prusa), binary STL and SVG.
 (function (root) {
   'use strict';
 
-  // ---------- ZIP mínimo (sin compresión) ----------
+  // ---------- Minimal ZIP (no compression) ----------
   var CRC_TABLE = (function () {
     var t = new Uint32Array(256);
     for (var n = 0; n < 256; n++) { var c = n; for (var k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; }
@@ -50,10 +50,10 @@
   function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
 
   /**
-   * 3MF con estructura de proyecto de Bambu Studio (igual que los Doodle Disc de MakerWorld).
-   * opts.mode = 'parts'  → un objeto con 2 piezas: disco (filamento 1) y números (filamento 2). Para AMS.
-   * opts.mode = 'layer'  → una sola pieza + cambio de filamento al empezar los números (sin AMS).
-   * opts.partNames = [disco, números] y opts.designer: textos en el idioma de la interfaz.
+   * 3MF with a Bambu Studio project structure (same as the Doodle Discs on MakerWorld).
+   * opts.mode = 'parts'  → one object with 2 parts: disc (filament 1) and numbers (filament 2). For AMS.
+   * opts.mode = 'layer'  → a single part + filament change where the numbers start (no AMS).
+   * opts.partNames = [disc, numbers] and opts.designer: texts in the interface language.
    */
   function build3MF(meshes, opts) {
     var name = opts.name || 'disco';
@@ -118,7 +118,7 @@
     return new Uint8Array(buf);
   }
 
-  // SVG (vista superior, coordenadas en mm, útil para corte láser o revisión)
+  // SVG (top view, coordinates in mm, useful for laser cutting or checking)
   function pathsToD(paths) {
     var SC = DDGeometry.SC;
     return paths.map(function (p) { return 'M' + p.map(function (q) { return (q.X / SC).toFixed(3) + ' ' + (-q.Y / SC).toFixed(3); }).join('L') + 'Z'; }).join('');

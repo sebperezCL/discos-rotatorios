@@ -1,9 +1,9 @@
-// Vectorización: imagen de línea (negro sobre blanco) → polilíneas del esqueleto.
-// Todo trabaja en píxeles; la conversión a mm se hace en layout.js.
+// Vectorization: line image (black on white) → skeleton polylines.
+// Everything works in pixels; conversion to mm happens in layout.js.
 (function (root) {
   'use strict';
 
-  // Distancia euclídea exacta (Felzenszwalb & Huttenlocher). mask[i]=1 → distancia al 0 más cercano.
+  // Exact Euclidean distance (Felzenszwalb & Huttenlocher). mask[i]=1 → distance to the nearest 0.
   function edt(mask, W, H) {
     var INF = 1e20, f = new Float64Array(Math.max(W, H)), d = new Float64Array(Math.max(W, H));
     var v = new Int32Array(Math.max(W, H)), z = new Float64Array(Math.max(W, H) + 1);
@@ -51,7 +51,7 @@
     return { lab: lab, n: n, sizes: sizes };
   }
 
-  // Adelgazamiento Zhang-Suen
+  // Zhang-Suen thinning
   function thin(m, W, H) {
     var changed = true, del = [];
     function P(x, y) { return (x < 0 || y < 0 || x >= W || y >= H) ? 0 : m[y * W + x]; }
@@ -75,12 +75,12 @@
         if (del.length) changed = true;
       }
     }
-    // Quitar píxeles de "escalera" para dejar líneas 8-conexas de 1 px
+    // Remove "staircase" pixels to leave 1 px 8-connected lines
     for (y = 0; y < H; y++) for (x = 0; x < W; x++) {
       if (!m[y * W + x]) continue;
       var n = P(x, y - 1), e = P(x + 1, y), s = P(x, y + 1), w = P(x - 1, y);
       if ((n && e && !P(x - 1, y + 1)) || (e && s && !P(x - 1, y - 1)) || (s && w && !P(x + 1, y - 1)) || (w && n && !P(x + 1, y + 1))) {
-        // sólo si al quitarlo no se desconecta el vecindario
+        // only if removing it doesn't disconnect the neighborhood
         m[y * W + x] = 0;
         if (nbComponents(m, W, H, x, y) !== 1) m[y * W + x] = 1;
       }
@@ -90,7 +90,7 @@
 
   var NB = [[0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1]];
   function nbComponents(m, W, H, x, y) {
-    // número de componentes 8-conexas entre los vecinos de (x,y)
+    // number of 8-connected components among the neighbors of (x,y)
     var on = [];
     for (var k = 0; k < 8; k++) {
       var qx = x + NB[k][0], qy = y + NB[k][1];
@@ -112,7 +112,7 @@
     return c;
   }
 
-  // Convierte el esqueleto en un grafo y lo recorre en polilíneas
+  // Turns the skeleton into a graph and walks it into polylines
   function traceSkeleton(m, W, H) {
     var N = W * H, deg = new Uint8Array(N);
     function on(x, y) { return x >= 0 && y >= 0 && x < W && y < H && m[y * W + x]; }
@@ -122,7 +122,7 @@
       for (var k = 0; k < 8; k++) if (on(x + NB[k][0], y + NB[k][1])) c++;
       deg[i] = c;
     }
-    // nodos: grado != 2; se agrupan en clústeres
+    // nodes: degree != 2; grouped into clusters
     var isNode = new Uint8Array(N);
     for (i = 0; i < N; i++) if (m[i] && deg[i] !== 2) isNode[i] = 1;
     var cl = components(isNode, W, H), cx = new Float64Array(cl.n + 1), cy = new Float64Array(cl.n + 1), cn = new Float64Array(cl.n + 1);
@@ -175,11 +175,11 @@
         }
       }
     }
-    // nodos aislados (puntos sueltos)
+    // isolated nodes (loose dots)
     var nodeDeg = new Int32Array(cl.n + 1);
     edges.forEach(function (e) { nodeDeg[e.a]++; if (e.b > 0) nodeDeg[e.b]++; });
     for (L = 1; L <= cl.n; L++) if (!nodeDeg[L]) edges.push({ pts: [[cx[L], cy[L]]], a: L, b: L, dot: true });
-    // lazos puros (sin nodos)
+    // pure loops (no nodes)
     for (i = 0; i < N; i++) {
       if (!m[i] || visited[i] || isNode[i]) continue;
       var pts = [], cur = i, prev = -1;
@@ -202,7 +202,7 @@
 
   function plen(p) { var s = 0; for (var i = 1; i < p.length; i++) s += Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]); return s; }
 
-  // Quita ramitas cortas y une cadenas a través de nodos de grado 2
+  // Removes short spurs and joins chains through degree-2 nodes
   function cleanGraph(edges, spurLen) {
     for (var iter = 0; iter < 3; iter++) {
       var deg = {};
@@ -214,7 +214,7 @@
         return !(leaf && plen(e.pts) < spurLen);
       });
     }
-    // unir cadenas en nodos de grado 2
+    // join chains at degree-2 nodes
     var changed = true;
     while (changed) {
       changed = false;
@@ -277,24 +277,24 @@
   }
 
   /**
-   * gray: Uint8Array (0=negro..255=blanco), W,H
+   * gray: Uint8Array (0=black..255=white), W,H
    * opts: threshold, fillToOutline, minSpeck (px)
-   * Devuelve { polylines: [[[x,y]...]], lineWidth (px), mask, skeleton }
+   * Returns { polylines: [[[x,y]...]], lineWidth (px), mask, skeleton }
    */
   function vectorize(gray, W, H, opts) {
     opts = opts || {};
     var thr = opts.threshold != null ? opts.threshold : 128;
     var N = W * H, ink = new Uint8Array(N);
     for (var i = 0; i < N; i++) ink[i] = gray[i] < thr ? 1 : 0;
-    // borde de 1 px en blanco
+    // 1 px white border
     for (var x = 0; x < W; x++) { ink[x] = 0; ink[(H - 1) * W + x] = 0; }
     for (var y = 0; y < H; y++) { ink[y * W] = 0; ink[y * W + W - 1] = 0; }
-    // quitar manchas pequeñas
+    // remove small specks
     var minSpeck = opts.minSpeck != null ? opts.minSpeck : Math.max(4, Math.round(N * 2e-5));
     var cc = components(ink, W, H);
     for (i = 0; i < N; i++) if (ink[i] && cc.sizes[cc.lab[i]] < minSpeck) ink[i] = 0;
 
-    // grosor típico de línea
+    // typical line width
     var dt = edt(ink, W, H);
     var sk0 = thin(ink.slice(), W, H), vals = [];
     for (i = 0; i < N; i++) if (sk0[i]) vals.push(dt[i]);
@@ -304,7 +304,7 @@
 
     var work = ink;
     if (opts.fillToOutline !== false) {
-      // zonas rellenas (mucho más gruesas que la línea) → sólo su contorno
+      // filled areas (much thicker than the line) → outline only
       var core = new Uint8Array(N), anyCore = false, tCore = Math.max(halfW * 2.2, halfW + 3);
       for (i = 0; i < N; i++) if (dt[i] > tCore) { core[i] = 1; anyCore = true; }
       if (anyCore) {
