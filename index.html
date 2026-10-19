@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generador de discos rotatorios</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  /* Taller de impresión: panel de parámetros a la izquierda, mesa de trabajo a la derecha */
+  :root {
+    --bg: #f3f5f4; --panel: #ffffff; --ink: #18201f; --muted: #5f6b69; --line: #dbe2e0;
+    --accent: #0a8f96; --accent-ink: #ffffff; --warn: #a65d00; --bad: #b42318; --ok: #157a3c;
+    --paper: #fbfaf7; --trace: #1d1d1f;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #151a1a; --panel: #1e2524; --ink: #e8eeed; --muted: #9aa8a6; --line: #34403e; --accent: #2bb3ba; --accent-ink: #081213; --warn: #f0a33a; --bad: #f87171; --ok: #4ade80; --paper: #262d2c; --trace: #f2f2f2; color-scheme: dark; } }
+  :root[data-theme="dark"] {
+    --bg: #151a1a; --panel: #1e2524; --ink: #e8eeed; --muted: #9aa8a6; --line: #34403e; --accent: #2bb3ba; --accent-ink: #081213; --warn: #f0a33a; --bad: #f87171; --ok: #4ade80; --paper: #262d2c; --trace: #f2f2f2; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--ink); }
+  header { padding-block: 14px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); border-bottom: 1px solid var(--line); display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  header h1 { font-size: 18px; margin: 0; }
+  header span { color: var(--muted); }
+  main { display: grid; grid-template-columns: 330px 1fr; gap: 0; min-height: calc(100vh - 54px); }
+  aside { border-right: 1px solid var(--line); padding: 14px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px, env(safe-area-inset-left, 0px)); overflow: auto; max-height: calc(100vh - 54px); position: sticky; top: 0; }
+  section.view { padding: 16px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px, env(safe-area-inset-left, 0px)); min-width: 0; }
+  fieldset { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px 10px; margin: 0 0 12px; background: var(--panel); }
+  legend { font-weight: 600; padding: 0 4px; }
+  label.row { display: grid; grid-template-columns: minmax(0, 1fr) 92px; align-items: center; gap: 8px; margin: 6px 0; }
+  label.row small { display: block; color: var(--muted); font-size: 12px; }
+  label.check { display: flex; gap: 8px; align-items: center; margin: 6px 0; }
+  input[type=number], input[type=color], select { width: 100%; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); font: inherit; }
+  input[type=color] { height: 28px; padding: 1px 2px; }
+  details summary { cursor: pointer; font-weight: 600; margin: 4px 0; }
+  .drop { border: 2px dashed var(--line); border-radius: 10px; padding: 14px; text-align: center; color: var(--muted); cursor: pointer; background: var(--panel); margin-bottom: 12px; }
+  .drop.over { border-color: var(--accent); color: var(--ink); }
+  .drop img { max-width: 100%; max-height: 120px; display: block; margin: 8px auto 0; }
+  button { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 7px 12px; border-radius: 8px; cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; width: 100%; padding: 10px; }
+  button:disabled { opacity: .5; cursor: default; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+  .tabs button.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .stage { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; justify-content: center; }
+  .stage svg, .stage canvas { width: min(100%, 72vh); height: auto; aspect-ratio: 1; display: block; }
+  .stage canvas.wide { aspect-ratio: auto; }
+  .stats { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 12px 0; color: var(--muted); }
+  .stats b { color: var(--ink); }
+  .msg { margin: 8px 0; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); }
+  .msg.warn { border-color: var(--warn); color: var(--warn); }
+  .msg.bad { border-color: var(--bad); color: var(--bad); }
+  .msg.ok { border-color: var(--ok); color: var(--ok); }
+  .downloads { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+  .sim { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+  .sim input[type=range] { flex: 1; min-width: 160px; }
+  .help { color: var(--muted); max-width: 760px; }
+  .help h3 { color: var(--ink); margin: 18px 0 6px; font-size: 15px; }
+  #busy { color: var(--muted); margin: 6px 0; }
+  #thumbNote { font-size: 12px; margin-top: 4px; }
+  @media (max-width: 860px) {
+    main { grid-template-columns: 1fr; }
+    aside { position: static; max-height: none; border-right: 0; border-bottom: 1px solid var(--line); }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Generador de discos rotatorios</h1>
+  <span>Ilustración de línea → disco plantilla giratorio imprimible en 3D</span>
+</header>
+<main>
+  <aside>
+    <div class="drop" id="drop">
+      <b>Elige o arrastra una imagen</b><br>Dibujo de línea negra sobre fondo blanco (PNG/JPG)
+      <input type="file" id="file" accept="image/*" hidden>
+      <img id="thumb" alt="" hidden>
+      <div id="thumbNote" hidden></div>
+    </div>
+    <button class="primary" id="go" disabled>Generar disco</button>
+    <div id="busy" hidden>Generando…</div>
+
+    <fieldset>
+      <legend>Disco</legend>
+      <label class="row"><span>Diámetro (mm)</span><input type="number" id="diameter" value="120" step="1" min="60" max="250"></label>
+      <label class="row"><span>Grosor del disco (mm)</span><input type="number" id="thickness" value="0.84" step="0.04" min="0.4"></label>
+      <label class="row"><span>Altura de los números (mm)<small>en relieve sobre el disco</small></span><input type="number" id="numH" value="0.32" step="0.04" min="0.12"></label>
+      <label class="row"><span>Color del disco</span><input type="color" id="discColor" value="#00b1b7"></label>
+      <label class="row"><span>Color de los números</span><input type="color" id="numColor" value="#111111"></label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Dibujo</legend>
+      <label class="check"><input type="checkbox" id="autoSize" checked> Tamaño automático</label>
+      <label class="row"><span>Tamaño (mm, lado mayor)</span><input type="number" id="sizeMm" value="50" step="1" min="10"></label>
+      <label class="row"><span>Radio libre en el centro (mm)<small>el centro casi no gira; mejor dejarlo vacío</small></span><input type="number" id="rMin" value="8" step="0.5" min="0"></label>
+      <label class="check"><input type="checkbox" id="autoDir" checked> Dirección automática</label>
+      <label class="row"><span>Dirección (°)<small>90 = el dibujo queda arriba del centro, 270 = abajo</small></span><input type="number" id="dirDeg" value="90" step="15"></label>
+      <label class="check"><input type="checkbox" id="autoOffset" checked> Desplazamiento automático</label>
+      <label class="row"><span>Desplazamiento (mm)</span><input type="number" id="offsetMm" value="20" step="0.5"></label>
+      <label class="row"><span>Umbral de negro (0-255)</span><input type="number" id="threshold" value="140" step="5" min="10" max="250"></label>
+      <label class="check"><input type="checkbox" id="fillToOutline" checked> Rellenos → sólo contorno</label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Ranuras</legend>
+      <label class="row"><span>Ancho de ranura (mm)<small>lo que dibuja el lápiz</small></span><input type="number" id="slotW" value="1.3" step="0.05" min="0.6"></label>
+      <label class="row"><span>Puente mínimo (mm)<small>material entre ranuras</small></span><input type="number" id="gap" value="1.5" step="0.1" min="0.6"></label>
+      <label class="row"><span>Largo máximo por ranura (mm)</span><input type="number" id="maxLen" value="30" step="1" min="5"></label>
+      <label class="row"><span>Máx. ranuras por número<small>0 = sin límite; 1 = como el Dog Man (más posiciones)</small></span><input type="number" id="maxPerPos" value="0" step="1" min="0"></label>
+    </fieldset>
+
+    <details>
+      <summary>Avanzado</summary>
+      <fieldset>
+        <legend>Números y muescas</legend>
+        <label class="row"><span>Altura número junto a ranura (mm)</span><input type="number" id="labelH" value="2.8" step="0.1" min="1.5"></label>
+        <label class="row"><span>Altura número del borde (mm)</span><input type="number" id="rimNumH" value="3.4" step="0.1" min="1.5"></label>
+        <label class="row"><span>Grosor del trazo (mm)</span><input type="number" id="labelStroke" value="0.6" step="0.05" min="0.3"></label>
+        <label class="row"><span>Largo de la muesca (mm)</span><input type="number" id="tickLen" value="2.5" step="0.1" min="0.5"></label>
+        <label class="row"><span>Ancho de la muesca (mm)</span><input type="number" id="tickW" value="0.9" step="0.1" min="0.4"></label>
+        <label class="check"><input type="checkbox" id="frame" checked> Marco de referencia (posición 1)</label>
+      </fieldset>
+      <fieldset>
+        <legend>Cálculo</legend>
+        <label class="row"><span>Paso angular (°)</span><input type="number" id="angleStep" value="1" step="0.5" min="0.25"></label>
+        <label class="row"><span>Separación mín. entre muescas (°)<small>0 = automática</small></span><input type="number" id="minSepDeg" value="0" step="0.5" min="0"></label>
+        <label class="row"><span>Intentos<small>más intentos = mejor reparto, más lento</small></span><input type="number" id="tries" value="9" step="1" min="1" max="60"></label>
+      </fieldset>
+      <fieldset>
+        <legend>Impresión</legend>
+        <label class="row"><span>Primera capa (mm)</span><input type="number" id="firstLayer" value="0.2" step="0.02"></label>
+        <label class="row"><span>Altura de capa (mm)</span><input type="number" id="layerH" value="0.16" step="0.02"></label>
+        <label class="row"><span>Tamaño de la cama (mm)</span><input type="number" id="bed" value="256" step="1"></label>
+      </fieldset>
+    </details>
+  </aside>
+
+  <section class="view">
+    <div class="tabs" id="tabs">
+      <button data-tab="disc" class="on">Disco</button>
+      <button data-tab="sim">Simulación</button>
+      <button data-tab="vec">Vectorización</button>
+      <button data-tab="help">Cómo se usa</button>
+    </div>
+    <div id="messages"></div>
+    <div class="stats" id="stats"></div>
+
+    <div data-pane="disc">
+      <div class="stage" id="discStage"><svg viewBox="-60 -60 120 120"><circle r="59" fill="none" stroke="currentColor" stroke-dasharray="2 2" opacity=".3"/><text y="2" text-anchor="middle" font-size="5" fill="currentColor" opacity=".5">Carga una imagen para empezar</text></svg></div>
+      <div class="downloads">
+        <button id="dl3mf" disabled>3MF multicolor (AMS)</button>
+        <button id="dl3mfLayer" disabled>3MF con cambio de filamento por capa</button>
+        <button id="dlStlBody" disabled>STL disco</button>
+        <button id="dlStlNum" disabled>STL números</button>
+        <button id="dlSvg" disabled>SVG</button>
+        <button id="dlZip" disabled>Todo en un ZIP</button>
+      </div>
+    </div>
+
+    <div data-pane="sim" hidden>
+      <div class="stage"><canvas id="simCanvas" width="900" height="900"></canvas></div>
+      <div class="sim">
+        <button id="play">▶ Reproducir</button>
+        <input type="range" id="simStep" min="0" max="0" value="0">
+        <span id="simLabel"></span>
+      </div>
+    </div>
+
+    <div data-pane="vec" hidden>
+      <div class="stage"><canvas id="vecCanvas" class="wide" width="900" height="700"></canvas></div>
+    </div>
+
+    <div data-pane="help" hidden class="help">
+      <h3>Cómo funciona</h3>
+      <p>El dibujo se reduce a su línea central y se corta en trozos. Cada trozo se convierte en una ranura del disco, girada a un ángulo distinto para que ninguna ranura toque a otra. Al poner la muesca <b>1</b> frente a la marca del soporte y rellenar las ranuras con ese número, luego la <b>2</b>, etc., aparece el dibujo completo en el papel.</p>
+      <h3>Uso del disco</h3>
+      <p>Alinea la muesca 1 con la marca superior del soporte y rellena por completo cada ranura que tenga un 1 al lado (no sólo un trazo fino). Gira el disco en sentido horario a la siguiente muesca y repite. El marco rectangular tenue muestra dónde quedará el dibujo cuando la muesca 1 está arriba.</p>
+      <h3>Imprimir con dos colores</h3>
+      <p><b>3MF multicolor (AMS):</b> un objeto con dos piezas, «Disco» (filamento 1) y «Numeros» (filamento 2). Ábrelo en Bambu Studio u Orca Slicer y revisa que cada pieza tenga su filamento.</p>
+      <p><b>3MF con cambio por capa:</b> una sola pieza con un cambio de filamento en la primera capa que es sólo números (como los Doodle Disc de MakerWorld). Sirve para impresoras sin AMS: la impresora se detiene y cambias el filamento a mano.</p>
+      <p>Los STL salen por separado por si usas otro programa. Todo está pensado para boquilla de 0,4 mm y capas de 0,16 mm.</p>
+      <h3>Consejos</h3>
+      <ul>
+        <li>Las ilustraciones sencillas, de trazo uniforme, funcionan mejor.</li>
+        <li>Lo que queda cerca del centro del disco casi no se mueve al girar, así que ahí cuesta repartir ranuras. Por eso la app aleja del centro la parte más cargada del dibujo.</li>
+        <li>Si aparecen trozos sin sitio, reduce el tamaño del dibujo, aumenta el diámetro, sube el radio libre del centro o los intentos.</li>
+        <li>Si el lápiz no entra, sube el ancho de ranura; si se rompen puentes, sube el puente mínimo.</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<script src="lib/clipper.js"></script>
+<script src="lib/earcut.min.js"></script>
+<script src="js/vectorize.js"></script>
+<script src="js/layout.js"></script>
+<script src="js/geometry.js"></script>
+<script src="js/export.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
