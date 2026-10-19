@@ -2,8 +2,9 @@
 (function () {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
-  var state = { gray: null, W: 0, H: 0, name: 'disco', vec: null, result: null };
+  var state = { gray: null, W: 0, H: 0, name: '', sample: false, noteKey: null, vec: null, result: null };
   var D2R = Math.PI / 180;
+  var t = DDI18n.t;
 
   // ---------- Parámetros ----------
   function num(id) { return parseFloat($(id).value); }
@@ -33,7 +34,7 @@
   }
 
   // ---------- Imagen ----------
-  function ingest(source, w, h, name, thumbUrl, note) {
+  function ingest(source, w, h, name, thumbUrl, noteKey) {
     var max = 1000, s = Math.min(1, max / Math.max(w, h));
     var W = Math.round(w * s), H = Math.round(h * s);
     var c = document.createElement('canvas'); c.width = W; c.height = H;
@@ -42,17 +43,17 @@
     ctx.drawImage(source, 0, 0, W, H);
     var d = ctx.getImageData(0, 0, W, H).data, g = new Uint8Array(W * H);
     for (var i = 0; i < W * H; i++) g[i] = Math.round(0.299 * d[4 * i] + 0.587 * d[4 * i + 1] + 0.114 * d[4 * i + 2]);
-    state.gray = g; state.W = W; state.H = H; state.img = source; state.name = name;
+    state.gray = g; state.W = W; state.H = H; state.img = source; state.name = name; state.sample = !!noteKey; state.noteKey = noteKey;
     $('thumb').src = thumbUrl; $('thumb').hidden = false;
-    $('thumbNote').textContent = note || ''; $('thumbNote').hidden = !note;
+    renderNote();
     $('go').disabled = false;
     generate();
   }
   function loadFile(f) {
     if (!f || !/^image\//.test(f.type)) return;
-    var name = f.name.replace(/\.[^.]+$/, '').replace(/[^\w\-]+/g, '_') || 'disco';
+    var name = f.name.replace(/\.[^.]+$/, '').replace(/[^\w\-]+/g, '_');
     var url = URL.createObjectURL(f), img = new Image();
-    img.onload = function () { ingest(img, img.width, img.height, name, url, ''); };
+    img.onload = function () { ingest(img, img.width, img.height, name, url, null); };
     img.src = url;
   }
   // Dibujo de ejemplo (un gato) para que la página abra mostrando un disco
@@ -76,7 +77,7 @@
     P(function () { x.moveTo(300, 370); x.quadraticCurveTo(250, 520, 290, 600); x.lineTo(510, 600); x.quadraticCurveTo(550, 520, 500, 370); }); // cuerpo
     P(function () { x.moveTo(370, 600); x.lineTo(370, 540); x.moveTo(430, 600); x.lineTo(430, 540); });   // patas
     P(function () { x.moveTo(510, 590); x.bezierCurveTo(650, 600, 700, 480, 640, 420); });      // cola
-    ingest(c, 800, 640, 'ejemplo_gato', c.toDataURL(), 'Ejemplo: elige tu propia imagen para reemplazarlo.');
+    ingest(c, 800, 640, 'sample', c.toDataURL(), 'sample.note');
   }
   var drop = $('drop');
   drop.addEventListener('click', function () { $('file').click(); });
@@ -91,7 +92,7 @@
     if (!state.gray) return;
     $('busy').hidden = false; $('go').disabled = true;
     setTimeout(function () {
-      try { run(); } catch (err) { console.error(err); showMessages([{ cls: 'bad', txt: 'Error: ' + err.message }]); }
+      try { run(); } catch (err) { console.error(err); showMessages([{ cls: 'bad', key: 'msg.error', vars: { msg: err.message } }]); }
       $('busy').hidden = true; $('go').disabled = false;
     }, 30);
   }
@@ -103,7 +104,7 @@
       state.vec = DDVectorize.vectorize(state.gray, state.W, state.H, { threshold: p.threshold, fillToOutline: p.fillToOutline });
       vecKey = key;
     }
-    if (!state.vec.polylines.length) { showMessages([{ cls: 'bad', txt: 'No se encontraron líneas. Prueba a subir el umbral de negro.' }]); return; }
+    if (!state.vec.polylines.length) { showMessages([{ cls: 'bad', key: 'msg.noLines' }]); return; }
     function place(dir) {
       return DDLayout.placeDrawing(state.vec.polylines, {
         sizeMm: p.sizeMm, autoSize: p.autoSize, rMin: p.rMin, rMax: p.rMax, dirDeg: dir, offsetMm: p.offsetMm, slotW: p.slotW
@@ -136,27 +137,46 @@
       $('sizeMm').value = pd.sizeMm;
     }
     if (p.offsetMm == null) $('offsetMm').value = pd.offset.toFixed(1);
-    if (pd.warn) msgs.push({ cls: 'warn', txt: pd.warn });
-    if (!p.autoSize && pd.rMinActual < p.rMin) msgs.push({ cls: 'warn', txt: 'El dibujo pasa a ' + Math.max(0, pd.rMinActual).toFixed(1) + ' mm del centro; cerca del centro hay poco sitio para repartir ranuras.' });
+    pd.warn.forEach(function (w) { msgs.push({ cls: 'warn', key: w.key, vars: w.vars }); });
+    if (!p.autoSize && pd.rMinActual < p.rMin) msgs.push({ cls: 'warn', key: 'msg.near', vars: { r: Math.max(0, pd.rMinActual).toFixed(1) } });
 
     var g = DDGeometry.build2D(lay, pd.bbox, p);
     var meshes = DDGeometry.build3D(g, p);
     state.result = { p: p, pd: pd, lay: lay, g: g, meshes: meshes };
 
-    if (lay.failed.length) msgs.push({ cls: 'bad', txt: lay.failed.length + ' trozo(s) del dibujo no caben sin tocar otras ranuras (marcados en rojo en la simulación). Prueba con ' + (p.maxPerPos > 0 ? 'un máximo mayor de ranuras por número, ' : '') + 'más intentos, otra dirección, un dibujo más pequeño, un disco más grande o un puente mínimo menor.' });
-    if (g.missingLabels.length) msgs.push({ cls: 'warn', txt: g.missingLabels.length + ' ranura(s) sin número al lado por falta de espacio (posiciones ' + uniq(g.missingLabels).join(', ') + ').' });
-    if (!lay.failed.length && !g.missingLabels.length) msgs.push({ cls: 'ok', txt: 'Listo: todas las ranuras caben y tienen su número.' });
+    if (lay.failed.length) msgs.push({ cls: 'bad', key: 'msg.failed', vars: { n: lay.failed.length, maxHint: p.maxPerPos > 0 ? { key: 'msg.failedMaxHint' } : '' } });
+    if (g.missingLabels.length) msgs.push({ cls: 'warn', key: 'msg.missing', vars: { n: g.missingLabels.length, list: uniq(g.missingLabels).join(', ') } });
+    if (!lay.failed.length && !g.missingLabels.length) msgs.push({ cls: 'ok', key: 'msg.ok' });
     showMessages(msgs);
-    $('stats').innerHTML = [
-      ['Posiciones', lay.positions.length], ['Ranuras', lay.pieces.length],
-      ['Dibujo', pd.sizeMm.toFixed(1) + ' mm'], ['Desplazamiento', pd.offset.toFixed(1) + ' mm'],
-      ['Disco', p.diameter + ' mm × ' + (p.thickness + p.numH).toFixed(2) + ' mm']
-    ].map(function (a) { return '<span>' + a[0] + ': <b>' + a[1] + '</b></span>'; }).join('');
+    renderStats();
     drawDisc(); drawVec(); setupSim();
     ['dl3mf', 'dl3mfLayer', 'dlStlBody', 'dlStlNum', 'dlSvg', 'dlZip'].forEach(function (id) { $(id).disabled = false; });
   }
   function uniq(a) { return a.filter(function (x, i) { return a.indexOf(x) === i; }).sort(function (x, y) { return x - y; }); }
-  function showMessages(m) { $('messages').innerHTML = m.map(function (x) { return '<div class="msg ' + x.cls + '">' + x.txt + '</div>'; }).join(''); }
+  // Los mensajes y textos dinámicos se guardan como claves para poder cambiar de idioma sin recalcular
+  var lastMsgs = [];
+  function msgText(x) {
+    var v = {};
+    Object.keys(x.vars || {}).forEach(function (k) { var a = x.vars[k]; v[k] = a && a.key ? t(a.key) : a; });
+    return t(x.key, v);
+  }
+  function showMessages(m) {
+    lastMsgs = m;
+    $('messages').innerHTML = m.map(function (x) { return '<div class="msg ' + x.cls + '">' + msgText(x) + '</div>'; }).join('');
+  }
+  function renderStats() {
+    var r = state.result; if (!r) return;
+    var p = r.p, pd = r.pd, lay = r.lay;
+    $('stats').innerHTML = [
+      [t('stat.positions'), lay.positions.length], [t('stat.slots'), lay.pieces.length],
+      [t('stat.drawing'), pd.sizeMm.toFixed(1) + ' mm'], [t('stat.offset'), pd.offset.toFixed(1) + ' mm'],
+      [t('stat.disc'), p.diameter + ' mm × ' + (p.thickness + p.numH).toFixed(2) + ' mm']
+    ].map(function (a) { return '<span>' + a[0] + ': <b>' + a[1] + '</b></span>'; }).join('');
+  }
+  function renderNote() {
+    $('thumbNote').textContent = state.noteKey ? t(state.noteKey) : '';
+    $('thumbNote').hidden = !state.noteKey;
+  }
 
   // ---------- Vistas ----------
   function drawDisc() {
@@ -228,23 +248,24 @@
     // marca superior del soporte
     ctx.fillStyle = tok('--ink');
     ctx.beginPath(); ctx.moveTo(cx, cy - R * sc - 2); ctx.lineTo(cx - 9, cy - R * sc - 16); ctx.lineTo(cx + 9, cy - R * sc - 16); ctx.fill();
-    $('simLabel').textContent = k === 0 ? 'Papel en blanco' : (k > r.lay.positions.length ? 'Dibujo completo (' + r.lay.positions.length + ' posiciones)' : 'Posición ' + k + ' de ' + r.lay.positions.length);
+    var n = r.lay.positions.length;
+    $('simLabel').textContent = k === 0 ? t('sim.blank') : (k > n ? t('sim.done', { n: n }) : t('sim.pos', { k: k, n: n }));
   }
   $('simStep').addEventListener('input', function () { stopPlay(); drawSim(+this.value); });
-  function stopPlay() { if (simTimer) { clearInterval(simTimer); simTimer = null; $('play').textContent = '▶ Reproducir'; } }
+  function stopPlay() { if (simTimer) { clearInterval(simTimer); simTimer = null; $('play').textContent = t('play'); } }
   $('play').addEventListener('click', function () {
     if (!state.result) return;
     if (simTimer) { stopPlay(); return; }
     var k = 0, n = state.result.lay.positions.length;
-    $('play').textContent = '■ Detener';
+    $('play').textContent = t('stop');
     simTimer = setInterval(function () { $('simStep').value = k; drawSim(k); k++; if (k > n + 1) stopPlay(); }, 700);
   });
 
   // ---------- Pestañas ----------
   $('tabs').addEventListener('click', function (e) {
-    var t = e.target.getAttribute('data-tab'); if (!t) return;
+    var tab = e.target.getAttribute('data-tab'); if (!tab) return;
     [].forEach.call(document.querySelectorAll('#tabs button'), function (b) { b.classList.toggle('on', b === e.target); });
-    [].forEach.call(document.querySelectorAll('[data-pane]'), function (pn) { pn.hidden = pn.getAttribute('data-pane') !== t; });
+    [].forEach.call(document.querySelectorAll('[data-pane]'), function (pn) { pn.hidden = pn.getAttribute('data-pane') !== tab; });
   });
 
   // ---------- Descargas ----------
@@ -256,7 +277,7 @@
     if (dlCap) {
       if (!ALLOWED.test(name)) { data = DDExport.zip([{ name: name, data: data }]); name = name + '.zip'; }
       dlCap.save({ filename: name, data: data }).catch(function (e) {
-        if (e && e.code !== 'declined') showMessages([{ cls: 'warn', txt: 'No se pudo guardar el archivo (' + (e.code || 'error') + ').' }]);
+        if (e && e.code !== 'declined') showMessages([{ cls: 'warn', key: 'msg.saveFail', vars: { code: e.code || 'error' } }]);
       });
       return;
     }
@@ -265,7 +286,12 @@
     a.download = name; document.body.appendChild(a); a.click();
     setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
   }
-  function fileBase() { return state.name + '_disco_' + state.result.p.diameter + 'mm'; }
+  function fileBase() { return (state.sample ? t('sample.name') : state.name || t('file.disc')) + '_' + t('file.disc') + '_' + state.result.p.diameter + 'mm'; }
+  function opts3MF(mode) {
+    var p = state.result.p, o = { mode: mode, name: fileBase(), bedCenter: p.bed / 2, partNames: [t('part.disc'), t('part.numbers')], designer: t('title') };
+    if (mode === 'layer') { o.changeZ = changeZ(p); o.numColor = p.numColor; }
+    return o;
+  }
   function changeZ(p) {
     // primera capa que ya es sólo números (su mitad queda por encima del disco)
     var z = p.firstLayer;
@@ -273,15 +299,13 @@
     return Math.round(z * 1000) / 1000;
   }
   $('dl3mf').addEventListener('click', function () {
-    var r = state.result;
-    save(DDExport.build3MF(r.meshes, { mode: 'parts', name: fileBase(), bedCenter: r.p.bed / 2 }), fileBase() + '_AMS.3mf', 'model/3mf');
+    save(DDExport.build3MF(state.result.meshes, opts3MF('parts')), fileBase() + '_AMS.3mf', 'model/3mf');
   });
   $('dl3mfLayer').addEventListener('click', function () {
-    var r = state.result;
-    save(DDExport.build3MF(r.meshes, { mode: 'layer', name: fileBase(), bedCenter: r.p.bed / 2, changeZ: changeZ(r.p), numColor: r.p.numColor }), fileBase() + '_cambio_capa.3mf', 'model/3mf');
+    save(DDExport.build3MF(state.result.meshes, opts3MF('layer')), fileBase() + '_' + t('file.layer') + '.3mf', 'model/3mf');
   });
-  $('dlStlBody').addEventListener('click', function () { save(DDExport.stl(state.result.meshes.body, 'disco'), fileBase() + '_disco.stl', 'model/stl'); });
-  $('dlStlNum').addEventListener('click', function () { save(DDExport.stl(state.result.meshes.numbers, 'numeros'), fileBase() + '_numeros.stl', 'model/stl'); });
+  $('dlStlBody').addEventListener('click', function () { save(DDExport.stl(state.result.meshes.body, t('file.disc')), fileBase() + '_' + t('file.disc') + '.stl', 'model/stl'); });
+  $('dlStlNum').addEventListener('click', function () { save(DDExport.stl(state.result.meshes.numbers, t('file.numbers')), fileBase() + '_' + t('file.numbers') + '.stl', 'model/stl'); });
   $('dlSvg').addEventListener('click', function () {
     var r = state.result;
     save(DDExport.svg(r.g, { disc: r.p.discColor, num: r.p.numColor }), fileBase() + '.svg', 'image/svg+xml');
@@ -290,10 +314,10 @@
   $('dlZip').addEventListener('click', function () {
     var r = state.result, b = fileBase();
     save(DDExport.zip([
-      { name: b + '_AMS.3mf', data: DDExport.build3MF(r.meshes, { mode: 'parts', name: b, bedCenter: r.p.bed / 2 }) },
-      { name: b + '_cambio_capa.3mf', data: DDExport.build3MF(r.meshes, { mode: 'layer', name: b, bedCenter: r.p.bed / 2, changeZ: changeZ(r.p), numColor: r.p.numColor }) },
-      { name: b + '_disco.stl', data: DDExport.stl(r.meshes.body, 'disco') },
-      { name: b + '_numeros.stl', data: DDExport.stl(r.meshes.numbers, 'numeros') },
+      { name: b + '_AMS.3mf', data: DDExport.build3MF(r.meshes, opts3MF('parts')) },
+      { name: b + '_' + t('file.layer') + '.3mf', data: DDExport.build3MF(r.meshes, opts3MF('layer')) },
+      { name: b + '_' + t('file.disc') + '.stl', data: DDExport.stl(r.meshes.body, t('file.disc')) },
+      { name: b + '_' + t('file.numbers') + '.stl', data: DDExport.stl(r.meshes.numbers, t('file.numbers')) },
       { name: b + '.svg', data: DDExport.svg(r.g, { disc: r.p.discColor, num: r.p.numColor }) }
     ]), b + '.zip', 'application/zip');
   });
@@ -304,6 +328,15 @@
   $('autoOffset').addEventListener('change', function () { $('offsetMm').disabled = this.checked; });
   $('autoDir').addEventListener('change', function () { $('dirDeg').disabled = this.checked; });
   $('sizeMm').disabled = true; $('offsetMm').disabled = true; $('dirDeg').disabled = true;
+  // ---------- Idioma ----------
+  $('lang').value = DDI18n.lang();
+  $('lang').addEventListener('change', function () { DDI18n.setLang(this.value); });
+  DDI18n.onChange(function () {
+    if (simTimer) $('play').textContent = t('stop');
+    renderNote(); showMessages(lastMsgs); renderStats();
+    if (state.result) drawSim(+$('simStep').value);
+  });
+  DDI18n.apply();
   window.DDApp = { state: state, loadFile: loadFile, generate: generate };
   loadSample();
 })();

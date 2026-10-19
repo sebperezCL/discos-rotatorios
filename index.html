@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Generador de discos rotatorios</title>
+<title>Rotating disc generator</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
   /* Taller de impresión: panel de parámetros a la izquierda, mesa de trabajo a la derecha */
@@ -21,6 +21,7 @@
   header { padding-block: 14px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); border-bottom: 1px solid var(--line); display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
   header h1 { font-size: 18px; margin: 0; }
   header span { color: var(--muted); }
+  header select { width: auto; margin-left: auto; }
   main { display: grid; grid-template-columns: 330px 1fr; gap: 0; min-height: calc(100vh - 54px); }
   aside { border-right: 1px solid var(--line); padding: 14px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px, env(safe-area-inset-left, 0px)); overflow: auto; max-height: calc(100vh - 54px); position: sticky; top: 0; }
   section.view { padding: 16px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px, env(safe-area-inset-left, 0px)); min-width: 0; }
@@ -64,102 +65,106 @@
 </head>
 <body>
 <header>
-  <h1>Generador de discos rotatorios</h1>
-  <span>Ilustración de línea → disco plantilla giratorio imprimible en 3D</span>
+  <h1 data-i18n="title">Rotating disc generator</h1>
+  <span data-i18n="subtitle">Line illustration → 3D-printable rotating stencil disc</span>
+  <select id="lang" aria-label="Language">
+    <option value="en">English</option>
+    <option value="es">Español</option>
+  </select>
 </header>
 <main>
   <aside>
     <div class="drop" id="drop">
-      <b>Elige o arrastra una imagen</b><br>Dibujo de línea negra sobre fondo blanco (PNG/JPG)
+      <b data-i18n="drop.title">Choose or drag an image</b><br><span data-i18n="drop.hint">Black line drawing on a white background (PNG/JPG)</span>
       <input type="file" id="file" accept="image/*" hidden>
       <img id="thumb" alt="" hidden>
       <div id="thumbNote" hidden></div>
     </div>
-    <button class="primary" id="go" disabled>Generar disco</button>
-    <div id="busy" hidden>Generando…</div>
+    <button class="primary" id="go" disabled data-i18n="go">Generate disc</button>
+    <div id="busy" hidden data-i18n="busy">Generating…</div>
 
     <fieldset>
-      <legend>Disco</legend>
-      <label class="row"><span>Diámetro (mm)</span><input type="number" id="diameter" value="120" step="1" min="60" max="250"></label>
-      <label class="row"><span>Grosor del disco (mm)</span><input type="number" id="thickness" value="0.84" step="0.04" min="0.4"></label>
-      <label class="row"><span>Altura de los números (mm)<small>en relieve sobre el disco</small></span><input type="number" id="numH" value="0.32" step="0.04" min="0.12"></label>
-      <label class="row"><span>Color del disco</span><input type="color" id="discColor" value="#00b1b7"></label>
-      <label class="row"><span>Color de los números</span><input type="color" id="numColor" value="#111111"></label>
+      <legend data-i18n="fs.disc">Disc</legend>
+      <label class="row"><span data-i18n="diameter">Diameter (mm)</span><input type="number" id="diameter" value="120" step="1" min="60" max="250"></label>
+      <label class="row"><span data-i18n="thickness">Disc thickness (mm)</span><input type="number" id="thickness" value="0.84" step="0.04" min="0.4"></label>
+      <label class="row"><span data-i18n-html="numH">Number height (mm)<small>raised above the disc</small></span><input type="number" id="numH" value="0.32" step="0.04" min="0.12"></label>
+      <label class="row"><span data-i18n="discColor">Disc color</span><input type="color" id="discColor" value="#00b1b7"></label>
+      <label class="row"><span data-i18n="numColor">Number color</span><input type="color" id="numColor" value="#111111"></label>
     </fieldset>
 
     <fieldset>
-      <legend>Dibujo</legend>
-      <label class="check"><input type="checkbox" id="autoSize" checked> Tamaño automático</label>
-      <label class="row"><span>Tamaño (mm, lado mayor)</span><input type="number" id="sizeMm" value="50" step="1" min="10"></label>
-      <label class="row"><span>Radio libre en el centro (mm)<small>el centro casi no gira; mejor dejarlo vacío</small></span><input type="number" id="rMin" value="8" step="0.5" min="0"></label>
-      <label class="check"><input type="checkbox" id="autoDir" checked> Dirección automática</label>
-      <label class="row"><span>Dirección (°)<small>90 = el dibujo queda arriba del centro, 270 = abajo</small></span><input type="number" id="dirDeg" value="90" step="15"></label>
-      <label class="check"><input type="checkbox" id="autoOffset" checked> Desplazamiento automático</label>
-      <label class="row"><span>Desplazamiento (mm)</span><input type="number" id="offsetMm" value="20" step="0.5"></label>
-      <label class="row"><span>Umbral de negro (0-255)</span><input type="number" id="threshold" value="140" step="5" min="10" max="250"></label>
-      <label class="check"><input type="checkbox" id="fillToOutline" checked> Rellenos → sólo contorno</label>
+      <legend data-i18n="fs.drawing">Drawing</legend>
+      <label class="check"><input type="checkbox" id="autoSize" checked> <span data-i18n="autoSize">Automatic size</span></label>
+      <label class="row"><span data-i18n="sizeMm">Size (mm, longest side)</span><input type="number" id="sizeMm" value="50" step="1" min="10"></label>
+      <label class="row"><span data-i18n-html="rMin">Free radius at the center (mm)<small>the center barely turns; best left empty</small></span><input type="number" id="rMin" value="8" step="0.5" min="0"></label>
+      <label class="check"><input type="checkbox" id="autoDir" checked> <span data-i18n="autoDir">Automatic direction</span></label>
+      <label class="row"><span data-i18n-html="dirDeg">Direction (°)<small>90 = drawing above the center, 270 = below</small></span><input type="number" id="dirDeg" value="90" step="15"></label>
+      <label class="check"><input type="checkbox" id="autoOffset" checked> <span data-i18n="autoOffset">Automatic offset</span></label>
+      <label class="row"><span data-i18n="offsetMm">Offset (mm)</span><input type="number" id="offsetMm" value="20" step="0.5"></label>
+      <label class="row"><span data-i18n="threshold">Black threshold (0-255)</span><input type="number" id="threshold" value="140" step="5" min="10" max="250"></label>
+      <label class="check"><input type="checkbox" id="fillToOutline" checked> <span data-i18n="fillToOutline">Fills → outline only</span></label>
     </fieldset>
 
     <fieldset>
-      <legend>Ranuras</legend>
-      <label class="row"><span>Ancho de ranura (mm)<small>lo que dibuja el lápiz</small></span><input type="number" id="slotW" value="1.3" step="0.05" min="0.6"></label>
-      <label class="row"><span>Puente mínimo (mm)<small>material entre ranuras</small></span><input type="number" id="gap" value="1.5" step="0.1" min="0.6"></label>
-      <label class="row"><span>Largo máximo por ranura (mm)</span><input type="number" id="maxLen" value="30" step="1" min="5"></label>
-      <label class="row"><span>Máx. ranuras por número<small>0 = sin límite; 1 = como el Dog Man (más posiciones)</small></span><input type="number" id="maxPerPos" value="0" step="1" min="0"></label>
+      <legend data-i18n="fs.slots">Slots</legend>
+      <label class="row"><span data-i18n-html="slotW">Slot width (mm)<small>what the pencil draws</small></span><input type="number" id="slotW" value="1.3" step="0.05" min="0.6"></label>
+      <label class="row"><span data-i18n-html="gap">Minimum bridge (mm)<small>material between slots</small></span><input type="number" id="gap" value="1.5" step="0.1" min="0.6"></label>
+      <label class="row"><span data-i18n="maxLen">Maximum length per slot (mm)</span><input type="number" id="maxLen" value="30" step="1" min="5"></label>
+      <label class="row"><span data-i18n-html="maxPerPos">Max. slots per number<small>0 = no limit; 1 = like Dog Man (more positions)</small></span><input type="number" id="maxPerPos" value="0" step="1" min="0"></label>
     </fieldset>
 
     <details>
-      <summary>Avanzado</summary>
+      <summary data-i18n="advanced">Advanced</summary>
       <fieldset>
-        <legend>Números y muescas</legend>
-        <label class="row"><span>Altura número junto a ranura (mm)</span><input type="number" id="labelH" value="2.8" step="0.1" min="1.5"></label>
-        <label class="row"><span>Altura número del borde (mm)</span><input type="number" id="rimNumH" value="3.4" step="0.1" min="1.5"></label>
-        <label class="row"><span>Grosor del trazo (mm)</span><input type="number" id="labelStroke" value="0.6" step="0.05" min="0.3"></label>
-        <label class="row"><span>Largo de la muesca (mm)</span><input type="number" id="tickLen" value="2.5" step="0.1" min="0.5"></label>
-        <label class="row"><span>Ancho de la muesca (mm)</span><input type="number" id="tickW" value="0.9" step="0.1" min="0.4"></label>
-        <label class="check"><input type="checkbox" id="frame" checked> Marco de referencia (posición 1)</label>
+        <legend data-i18n="fs.labels">Numbers and notches</legend>
+        <label class="row"><span data-i18n="labelH">Number height next to slot (mm)</span><input type="number" id="labelH" value="2.8" step="0.1" min="1.5"></label>
+        <label class="row"><span data-i18n="rimNumH">Rim number height (mm)</span><input type="number" id="rimNumH" value="3.4" step="0.1" min="1.5"></label>
+        <label class="row"><span data-i18n="labelStroke">Stroke width (mm)</span><input type="number" id="labelStroke" value="0.6" step="0.05" min="0.3"></label>
+        <label class="row"><span data-i18n="tickLen">Notch length (mm)</span><input type="number" id="tickLen" value="2.5" step="0.1" min="0.5"></label>
+        <label class="row"><span data-i18n="tickW">Notch width (mm)</span><input type="number" id="tickW" value="0.9" step="0.1" min="0.4"></label>
+        <label class="check"><input type="checkbox" id="frame" checked> <span data-i18n="frame">Reference frame (position 1)</span></label>
       </fieldset>
       <fieldset>
-        <legend>Cálculo</legend>
-        <label class="row"><span>Paso angular (°)</span><input type="number" id="angleStep" value="1" step="0.5" min="0.25"></label>
-        <label class="row"><span>Separación mín. entre muescas (°)<small>0 = automática</small></span><input type="number" id="minSepDeg" value="0" step="0.5" min="0"></label>
-        <label class="row"><span>Intentos<small>más intentos = mejor reparto, más lento</small></span><input type="number" id="tries" value="9" step="1" min="1" max="60"></label>
+        <legend data-i18n="fs.calc">Computation</legend>
+        <label class="row"><span data-i18n="angleStep">Angle step (°)</span><input type="number" id="angleStep" value="1" step="0.5" min="0.25"></label>
+        <label class="row"><span data-i18n-html="minSepDeg">Min. spacing between notches (°)<small>0 = automatic</small></span><input type="number" id="minSepDeg" value="0" step="0.5" min="0"></label>
+        <label class="row"><span data-i18n-html="tries">Attempts<small>more attempts = better layout, slower</small></span><input type="number" id="tries" value="9" step="1" min="1" max="60"></label>
       </fieldset>
       <fieldset>
-        <legend>Impresión</legend>
-        <label class="row"><span>Primera capa (mm)</span><input type="number" id="firstLayer" value="0.2" step="0.02"></label>
-        <label class="row"><span>Altura de capa (mm)</span><input type="number" id="layerH" value="0.16" step="0.02"></label>
-        <label class="row"><span>Tamaño de la cama (mm)</span><input type="number" id="bed" value="256" step="1"></label>
+        <legend data-i18n="fs.print">Printing</legend>
+        <label class="row"><span data-i18n="firstLayer">First layer (mm)</span><input type="number" id="firstLayer" value="0.2" step="0.02"></label>
+        <label class="row"><span data-i18n="layerH">Layer height (mm)</span><input type="number" id="layerH" value="0.16" step="0.02"></label>
+        <label class="row"><span data-i18n="bed">Bed size (mm)</span><input type="number" id="bed" value="256" step="1"></label>
       </fieldset>
     </details>
   </aside>
 
   <section class="view">
     <div class="tabs" id="tabs">
-      <button data-tab="disc" class="on">Disco</button>
-      <button data-tab="sim">Simulación</button>
-      <button data-tab="vec">Vectorización</button>
-      <button data-tab="help">Cómo se usa</button>
+      <button data-tab="disc" class="on" data-i18n="tab.disc">Disc</button>
+      <button data-tab="sim" data-i18n="tab.sim">Simulation</button>
+      <button data-tab="vec" data-i18n="tab.vec">Vectorization</button>
+      <button data-tab="help" data-i18n="tab.help">How to use</button>
     </div>
     <div id="messages"></div>
     <div class="stats" id="stats"></div>
 
     <div data-pane="disc">
-      <div class="stage" id="discStage"><svg viewBox="-60 -60 120 120"><circle r="59" fill="none" stroke="currentColor" stroke-dasharray="2 2" opacity=".3"/><text y="2" text-anchor="middle" font-size="5" fill="currentColor" opacity=".5">Carga una imagen para empezar</text></svg></div>
+      <div class="stage" id="discStage"><svg viewBox="-60 -60 120 120"><circle r="59" fill="none" stroke="currentColor" stroke-dasharray="2 2" opacity=".3"/><text y="2" text-anchor="middle" font-size="5" fill="currentColor" opacity=".5" data-i18n="placeholder">Load an image to start</text></svg></div>
       <div class="downloads">
-        <button id="dl3mf" disabled>3MF multicolor (AMS)</button>
-        <button id="dl3mfLayer" disabled>3MF con cambio de filamento por capa</button>
-        <button id="dlStlBody" disabled>STL disco</button>
-        <button id="dlStlNum" disabled>STL números</button>
-        <button id="dlSvg" disabled>SVG</button>
-        <button id="dlZip" disabled>Todo en un ZIP</button>
+        <button id="dl3mf" disabled data-i18n="dl.3mf">Multicolor 3MF (AMS)</button>
+        <button id="dl3mfLayer" disabled data-i18n="dl.3mfLayer">3MF with filament change by layer</button>
+        <button id="dlStlBody" disabled data-i18n="dl.stlBody">Disc STL</button>
+        <button id="dlStlNum" disabled data-i18n="dl.stlNum">Numbers STL</button>
+        <button id="dlSvg" disabled data-i18n="dl.svg">SVG</button>
+        <button id="dlZip" disabled data-i18n="dl.zip">Everything in a ZIP</button>
       </div>
     </div>
 
     <div data-pane="sim" hidden>
       <div class="stage"><canvas id="simCanvas" width="900" height="900"></canvas></div>
       <div class="sim">
-        <button id="play">▶ Reproducir</button>
+        <button id="play" data-i18n="play">▶ Play</button>
         <input type="range" id="simStep" min="0" max="0" value="0">
         <span id="simLabel"></span>
       </div>
@@ -169,26 +174,11 @@
       <div class="stage"><canvas id="vecCanvas" class="wide" width="900" height="700"></canvas></div>
     </div>
 
-    <div data-pane="help" hidden class="help">
-      <h3>Cómo funciona</h3>
-      <p>El dibujo se reduce a su línea central y se corta en trozos. Cada trozo se convierte en una ranura del disco, girada a un ángulo distinto para que ninguna ranura toque a otra. Al poner la muesca <b>1</b> frente a la marca del soporte y rellenar las ranuras con ese número, luego la <b>2</b>, etc., aparece el dibujo completo en el papel.</p>
-      <h3>Uso del disco</h3>
-      <p>Alinea la muesca 1 con la marca superior del soporte y rellena por completo cada ranura que tenga un 1 al lado (no sólo un trazo fino). Gira el disco en sentido horario a la siguiente muesca y repite. El marco rectangular tenue muestra dónde quedará el dibujo cuando la muesca 1 está arriba.</p>
-      <h3>Imprimir con dos colores</h3>
-      <p><b>3MF multicolor (AMS):</b> un objeto con dos piezas, «Disco» (filamento 1) y «Numeros» (filamento 2). Ábrelo en Bambu Studio u Orca Slicer y revisa que cada pieza tenga su filamento.</p>
-      <p><b>3MF con cambio por capa:</b> una sola pieza con un cambio de filamento en la primera capa que es sólo números (como los Doodle Disc de MakerWorld). Sirve para impresoras sin AMS: la impresora se detiene y cambias el filamento a mano.</p>
-      <p>Los STL salen por separado por si usas otro programa. Todo está pensado para boquilla de 0,4 mm y capas de 0,16 mm.</p>
-      <h3>Consejos</h3>
-      <ul>
-        <li>Las ilustraciones sencillas, de trazo uniforme, funcionan mejor.</li>
-        <li>Lo que queda cerca del centro del disco casi no se mueve al girar, así que ahí cuesta repartir ranuras. Por eso la app aleja del centro la parte más cargada del dibujo.</li>
-        <li>Si aparecen trozos sin sitio, reduce el tamaño del dibujo, aumenta el diámetro, sube el radio libre del centro o los intentos.</li>
-        <li>Si el lápiz no entra, sube el ancho de ranura; si se rompen puentes, sube el puente mínimo.</li>
-      </ul>
-    </div>
+    <div data-pane="help" hidden class="help" data-i18n-html="help"></div>
   </section>
 </main>
 
+<script src="js/i18n.js"></script>
 <script src="lib/clipper.js"></script>
 <script src="lib/earcut.min.js"></script>
 <script src="js/vectorize.js"></script>

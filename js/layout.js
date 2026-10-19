@@ -186,7 +186,7 @@
       var lo = 5, hi = 2 * p.rMax;
       for (var it0 = 0; it0 < 30; it0++) {
         var mid0 = (lo + hi) / 2, t = placeDrawing(polylines, Object.assign({}, p, { autoSize: false, sizeMm: mid0, offsetMm: null }));
-        if (!t.warn && t.rMinActual >= p.rMin) lo = mid0; else hi = mid0;
+        if (!t.warn.length && t.rMinActual >= p.rMin) lo = mid0; else hi = mid0;
       }
       return placeDrawing(polylines, Object.assign({}, p, { autoSize: false, sizeMm: Math.floor(lo * 2) / 2, offsetMm: null }));
     }
@@ -199,12 +199,12 @@
       base.forEach(function (pl) { pl.forEach(function (q) { m = Math.max(m, Math.hypot(q[0] + u[0] * d, q[1] + u[1] * d)); }); });
       return m;
     }
-    var scaleFix = 1, warn = null;
+    var scaleFix = 1, warn = [];   // avisos como { key, vars } para traducir en la interfaz
     var r0 = maxR(0) + p.slotW / 2;
     if (r0 > p.rMax) {
       scaleFix = (p.rMax - p.slotW / 2) / maxR(0);
       base = base.map(function (pl) { return pl.map(function (q) { return [q[0] * scaleFix, q[1] * scaleFix]; }); });
-      warn = 'El dibujo no cabía: se redujo a ' + (size * scaleFix).toFixed(1) + ' mm.';
+      warn.push({ key: 'warn.shrunk', vars: { size: (size * scaleFix).toFixed(1) } });
     }
     var d;
     if (p.offsetMm == null) {
@@ -213,7 +213,7 @@
       d = lo;
     } else {
       d = p.offsetMm;
-      if (maxR(d) + p.slotW / 2 > p.rMax + 1e-6) warn = (warn ? warn + ' ' : '') + 'Con ese desplazamiento el dibujo se sale de la zona útil (r ≤ ' + p.rMax.toFixed(1) + ' mm).';
+      if (maxR(d) + p.slotW / 2 > p.rMax + 1e-6) warn.push({ key: 'warn.outside', vars: { r: p.rMax.toFixed(1) } });
     }
     var placed = base.map(function (pl) { return pl.map(function (q) { return [q[0] + u[0] * d, q[1] + u[1] * d]; }); });
     var bw = w * s * scaleFix, bh = h * s * scaleFix, rMinActual = Infinity;

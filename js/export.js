@@ -53,6 +53,7 @@
    * 3MF con estructura de proyecto de Bambu Studio (igual que los Doodle Disc de MakerWorld).
    * opts.mode = 'parts'  → un objeto con 2 piezas: disco (filamento 1) y números (filamento 2). Para AMS.
    * opts.mode = 'layer'  → una sola pieza + cambio de filamento al empezar los números (sin AMS).
+   * opts.partNames = [disco, números] y opts.designer: textos en el idioma de la interfaz.
    */
   function build3MF(meshes, opts) {
     var name = opts.name || 'disco';
@@ -60,14 +61,14 @@
     var NS = 'xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" xmlns:BambuStudio="http://schemas.bambulab.com/package/2021" xmlns:p="http://schemas.microsoft.com/3dmanufacturing/production/2015/06" requiredextensions="p"';
     var parts = opts.mode === 'layer'
       ? [{ name: name, mesh: new DDGeometry.Mesh().append(meshes.body).append(meshes.numbers), extruder: 1 }]
-      : [{ name: 'Disco', mesh: meshes.body, extruder: 1 }, { name: 'Numeros', mesh: meshes.numbers, extruder: 2 }];
+      : [{ name: opts.partNames ? opts.partNames[0] : 'Disco', mesh: meshes.body, extruder: 1 }, { name: opts.partNames ? opts.partNames[1] : 'Numeros', mesh: meshes.numbers, extruder: 2 }];
     var sub = '<?xml version="1.0" encoding="UTF-8"?>\n<model unit="millimeter" xml:lang="en-US" ' + NS + '>\n <metadata name="BambuStudio:3mfVersion">1</metadata>\n <resources>\n';
     parts.forEach(function (pt, i) { sub += meshXML(i + 1, pt.mesh, ' p:UUID="' + uuid(i + 1) + '"'); });
     sub += ' </resources>\n <build/>\n</model>\n';
     var objId = parts.length + 1, cx = opts.bedCenter || 128;
     var main = '<?xml version="1.0" encoding="UTF-8"?>\n<model unit="millimeter" xml:lang="en-US" ' + NS + '>\n' +
       ' <metadata name="Application">BambuStudio-02.00.00.00</metadata>\n <metadata name="BambuStudio:3mfVersion">1</metadata>\n' +
-      ' <metadata name="Title">' + esc(name) + '</metadata>\n <metadata name="Designer">Generador de discos rotatorios</metadata>\n' +
+      ' <metadata name="Title">' + esc(name) + '</metadata>\n <metadata name="Designer">' + esc(opts.designer || 'Generador de discos rotatorios') + '</metadata>\n' +
       ' <metadata name="CreationDate">' + today + '</metadata>\n <metadata name="ModificationDate">' + today + '</metadata>\n' +
       ' <resources>\n  <object id="' + objId + '" p:UUID="' + uuid(100) + '" type="model">\n   <components>\n';
     parts.forEach(function (pt, i) {

@@ -1,29 +1,34 @@
-# Generador de discos rotatorios
+# Rotating disc generator
 
-App web estática (sin servidor) que convierte una ilustración de línea en un disco plantilla giratorio ("doodle disc") listo para imprimir en 3D, con los números en otro color.
+**English** · [Español](README.es.md)
 
-## Uso
+A static web app (no server) that turns a line illustration into a rotating stencil disc ("doodle disc") ready for 3D printing, with the numbers in a second color.
 
-Abre `index.html` en Chrome, Edge o Firefox (doble clic basta, no necesita servidor). Elige una imagen de línea negra sobre fondo blanco, ajusta los parámetros y descarga:
+## Usage
 
-- **3MF multicolor (AMS)**: un objeto con dos piezas, `Disco` (filamento 1) y `Numeros` (filamento 2).
-- **3MF con cambio por capa**: una sola pieza con un cambio de filamento en la primera capa de sólo números, igual que los Doodle Disc de MakerWorld. Para impresoras sin AMS.
-- **STL** del disco y de los números por separado, y **SVG** de la vista superior.
+Open `index.html` in Chrome, Edge or Firefox (double-clicking it is enough, no server needed). Pick a black-line-on-white image, adjust the parameters and download:
 
-## Cómo funciona
+- **Multicolor 3MF (AMS)**: one object with two parts, `Disc` (filament 1) and `Numbers` (filament 2).
+- **3MF with layer change**: a single part with a filament change at the first numbers-only layer, just like the Doodle Discs on MakerWorld. For printers without AMS.
+- **STL** files for the disc and the numbers separately, and an **SVG** of the top view.
 
-1. `js/vectorize.js`: umbral → limpieza → (rellenos a contorno) → esqueleto Zhang-Suen → grafo → polilíneas suavizadas.
-2. `js/layout.js`: coloca el dibujo en el disco (por defecto prueba arriba, abajo y a los lados del centro, con el mayor tamaño que deja libre el centro, y lo achica un poco si algo no cabe), une cadenas en los cruces, corta en trozos de largo máximo y busca para cada trozo un giro del disco en el que su ranura no toque ninguna otra (respetando el puente mínimo) y donde quepa su número. «Máx. ranuras por número» limita cuántas ranuras comparten una posición (0 = sin límite, 1 = una por número como el Dog Man). Prueba varias estrategias y se queda con la mejor.
-3. `js/geometry.js`: con Clipper hace las ranuras (polilínea engrosada), resta del disco, dibuja los números con una tipografía de trazo propia, las muescas del borde y el marco de referencia, y extruye todo a mallas cerradas (earcut).
-4. `js/export.js`: escribe el 3MF con la misma estructura que Bambu Studio, STL binario y SVG.
-5. `js/app.js`: interfaz, vistas previas y simulación posición por posición.
+The interface is available in English and Spanish. It follows the browser's language and can be switched from the selector in the top-right corner (the choice is remembered). Part and file names in the downloads follow the selected language.
 
-Medidas por defecto tomadas del modelo Dog Man de MakerWorld (120 mm, cuerpo 0,8 mm, números en relieve 0,32 mm, ranuras de 1,25 mm): aquí 120 mm, cuerpo 0,84 mm (cuadra con capas de 0,2 + 0,16), números 0,32 mm, ranuras 1,3 mm, puente 1,5 mm.
+## How it works
 
-## Convenciones
+1. `js/vectorize.js`: threshold → cleanup → (fills to outline) → Zhang-Suen skeleton → graph → smoothed polylines.
+2. `js/layout.js`: places the drawing on the disc (by default it tries above, below and to the sides of the center, at the largest size that keeps the center free, and shrinks it a little if something doesn't fit), joins chains at crossings, cuts them into pieces of a maximum length and, for each piece, looks for a disc rotation where its slot doesn't touch any other (respecting the minimum bridge) and where its number fits. "Max. slots per number" limits how many slots share a position (0 = no limit, 1 = one per number, like Dog Man). It tries several strategies and keeps the best one.
+3. `js/geometry.js`: uses Clipper to build the slots (thickened polylines), subtracts them from the disc, draws the numbers with a custom stroke font, the rim notches and the reference frame, and extrudes everything into closed meshes (earcut).
+4. `js/export.js`: writes the 3MF with the same structure as Bambu Studio, binary STL and SVG.
+5. `js/app.js`: interface, previews and position-by-position simulation.
+6. `js/i18n.js`: interface texts in English and Spanish.
 
-- Coordenadas en mm, y hacia arriba, origen en el centro del disco.
-- Si el disco está girado θ (antihorario), la ranura de un trozo asignado a θ es `R(-θ)·trozo`; su muesca está en el ángulo `90° − θ` y queda arriba frente a la marca del soporte.
-- Las posiciones se numeran para que girando el disco en sentido horario aparezcan 1, 2, 3…
+Default measurements are taken from the Dog Man model on MakerWorld (120 mm, 0.8 mm body, 0.32 mm raised numbers, 1.25 mm slots): here 120 mm, 0.84 mm body (matches 0.2 + 0.16 layers), 0.32 mm numbers, 1.3 mm slots, 1.5 mm bridge.
 
-Librerías incluidas en `lib/`: Clipper (Angus Johnson, licencia Boost) y earcut (Mapbox, ISC).
+## Conventions
+
+- Coordinates in mm, y pointing up, origin at the center of the disc.
+- If the disc is rotated by θ (counterclockwise), the slot of a piece assigned to θ is `R(-θ)·piece`; its notch sits at angle `90° − θ` and ends up at the top, facing the holder's mark.
+- Positions are numbered so that turning the disc clockwise shows 1, 2, 3…
+
+Libraries bundled in `lib/`: Clipper (Angus Johnson, Boost license) and earcut (Mapbox, ISC).
