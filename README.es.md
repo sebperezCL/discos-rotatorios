@@ -4,9 +4,11 @@
 
 App web estática (sin servidor) que convierte una ilustración de línea en un disco plantilla giratorio ("doodle disc") listo para imprimir en 3D, con los números en otro color.
 
+**Pruébala en línea: https://sebperezcl.github.io/rotating-discs/**
+
 ## Uso
 
-Abre `index.html` en Chrome, Edge o Firefox (doble clic basta, no necesita servidor). Elige una imagen de línea negra sobre fondo blanco, ajusta los parámetros y descarga:
+Abre la [versión en línea](https://sebperezcl.github.io/rotating-discs/) en Chrome, Edge o Firefox, o abre `index.html` localmente (doble clic basta, no necesita servidor). Elige una imagen de línea negra sobre fondo blanco, ajusta los parámetros y descarga:
 
 - **3MF multicolor (AMS)**: un objeto con dos piezas, `Disco` (filamento 1) y `Numeros` (filamento 2).
 - **3MF con cambio por capa**: una sola pieza con un cambio de filamento en la primera capa de sólo números, igual que los Doodle Disc de MakerWorld. Para impresoras sin AMS.

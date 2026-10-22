@@ -4,9 +4,11 @@
 
 A static web app (no server) that turns a line illustration into a rotating stencil disc ("doodle disc") ready for 3D printing, with the numbers in a second color.
 
+**Try it online: https://sebperezcl.github.io/rotating-discs/**
+
 ## Usage
 
-Open `index.html` in Chrome, Edge or Firefox (double-clicking it is enough, no server needed). Pick a black-line-on-white image, adjust the parameters and download:
+Open the [online version](https://sebperezcl.github.io/rotating-discs/) in Chrome, Edge or Firefox, or open `index.html` locally (double-clicking it is enough, no server needed). Pick a black-line-on-white image, adjust the parameters and download:
 
 - **Multicolor 3MF (AMS)**: one object with two parts, `Disc` (filament 1) and `Numbers` (filament 2).
 - **3MF with layer change**: a single part with a filament change at the first numbers-only layer, just like the Doodle Discs on MakerWorld. For printers without AMS.
